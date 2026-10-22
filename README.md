@@ -1,6 +1,6 @@
-# Cimaise
+# Valois Art Advisory
 
-Galerie d'art minimaliste : seize tableaux qui défilent en boucle, seuls ou d'un glissement (souris, doigt, clavier ou molette).
+Galerie d'art minimaliste : un écran d'accueil au nom de Valois Art Advisory, puis seize tableaux qui défilent en boucle, seuls ou d'un glissement (souris, doigt, clavier ou molette).
 Le tableau actif est net au centre, ses voisins plus petits sous un flou progressif de bord. Sous chaque œuvre,
 la vraie signature de l'artiste et une description.
 

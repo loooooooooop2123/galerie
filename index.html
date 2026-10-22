@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cimaise</title>
+<title>Valois Art Advisory</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Galerie d'art minimaliste : seize tableaux qui défilent en boucle, chacun signé de la main de son artiste.">
+<meta name="description" content="Valois Art Advisory : seize tableaux qui défilent en boucle, chacun signé de la main de son artiste.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap">
@@ -115,19 +115,19 @@ body {
 .work[aria-current="true"] { cursor: inherit; }
 .work:focus-visible { outline: 2px solid var(--ink); outline-offset: 8px; }
 
-.work[data-frame="or"] {
+[data-frame="or"] {
   --frame: linear-gradient(135deg, var(--or-clair), var(--or-fonce) 48%, var(--or-clair) 74%, var(--or-fonce));
 }
-.work[data-frame="ebene"] {
+[data-frame="ebene"] {
   --frame: linear-gradient(135deg, var(--ebene-reflet), var(--ebene) 40%, var(--ebene));
 }
-.work[data-frame="noyer"] {
+[data-frame="noyer"] {
   --frame: linear-gradient(135deg, var(--noyer-reflet), var(--noyer) 45%, var(--noyer));
 }
-.work[data-frame="chene"] {
+[data-frame="chene"] {
   --frame: linear-gradient(135deg, var(--chene-reflet), var(--chene) 50%, var(--chene));
 }
-.work[data-frame="paulownia"] {
+[data-frame="paulownia"] {
   --frame: linear-gradient(135deg, var(--paulownia-reflet), var(--paulownia));
 }
 
@@ -136,10 +136,11 @@ body {
   background: var(--passe-partout);
   box-shadow: inset 0 0 0 1px var(--shadow-near);
 }
+/* La miniature sert d'aperçu flou le temps que l'image pleine taille arrive. */
 .canvas {
   position: absolute;
   overflow: hidden;
-  background: var(--placeholder);
+  background: var(--placeholder) center / cover no-repeat;
 }
 .canvas::after {
   content: "";
@@ -273,6 +274,86 @@ body {
   text-wrap: pretty;
 }
 
+/* ---------- Écran d'accueil ----------
+   Le nom, puis les seize œuvres en miniature qui arrivent une à une à mesure qu'elles se chargent. */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--wall);
+  transition: opacity 800ms var(--ease-out), filter 800ms var(--ease-out), visibility 0s linear 800ms;
+}
+.intro.is-done { opacity: 0; filter: blur(6px); visibility: hidden; pointer-events: none; }
+.intro-brand {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  font-weight: 400;
+  text-align: center;
+  animation: arrive 1100ms var(--ease-out) both;
+}
+.intro-name {
+  font-family: var(--font-serif);
+  font-size: clamp(44px, 7.5vw, 84px);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.intro-sub {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.36em;
+  padding-left: 0.36em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.intro-works {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px 9px;
+  max-width: min(940px, 100%);
+}
+/* Une seule ligne quand la place le permet, sinon deux lignes égales de huit. */
+.intro-break { display: none; flex-basis: 100%; height: 0; }
+@media (max-width: 980px) { .intro-break { display: block; } }
+.mini {
+  height: var(--mini-h, 38px);
+  aspect-ratio: var(--r);
+  padding: 2px;
+  background: var(--frame, var(--placeholder));
+  box-shadow: 0 8px 14px -10px var(--shadow-far);
+  opacity: 0;
+  transform: translateY(6px);
+  filter: blur(4px);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out), filter 700ms var(--ease-out);
+}
+.mini.is-in { opacity: 1; transform: none; filter: none; }
+.mini img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+.intro-count {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(8px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+/* La galerie et le bouton de musique apparaissent quand l'accueil s'efface. */
+.gallery, .sound { transition: opacity 1000ms var(--ease-out) 150ms; }
+body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
+
 /* ---------- Musique : un seul bouton, discret ----------
    Trois points quand la musique est coupée, trois barres quand elle joue. Aucune animation continue. */
 .sound {
@@ -325,16 +406,30 @@ body {
   .meta { font-size: 12.5px; }
   .meta cite { font-size: 14px; }
   .cap { gap: 10px; }
+  .intro { gap: 30px; }
+  .mini { --mini-h: 24px; }
+  .intro-works { gap: 10px 7px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas img { transition-duration: 150ms; }
   .sound line { transition: none; }
+  .intro-brand { animation-name: fade; }
+  .mini { transform: none; filter: none; }
+  .intro.is-done { filter: none; }
 }
+@keyframes fade { from { opacity: 0; } }
 </style>
 </head>
 <body>
 
+<div class="intro" id="intro" role="status" aria-label="Chargement de la galerie">
+  <p class="intro-brand"><span class="intro-name">Valois</span><span class="intro-sub">Art Advisory</span></p>
+  <div class="intro-works" id="intro-works" aria-hidden="true"></div>
+  <p class="intro-count" id="intro-count" aria-hidden="true"></p>
+</div>
+
 <main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
+  <h1 class="sr-only">Valois Art Advisory</h1>
   <div id="track"></div>
   <div class="edge edge-left" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="edge edge-right" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -498,6 +593,7 @@ body {
 
   // ---------- DOM ----------
   let suppressClick = false, pointerActive = false;
+  const miniOf = w => w.img.replace('oeuvres/', 'oeuvres/mini/');
 
   const works = WORKS.map((w, i) => {
     const el = document.createElement('button');
@@ -515,6 +611,11 @@ body {
     img.draggable = false;
     img.decoding = 'async';
     img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
+    const loaded = new Promise(res => {
+      img.addEventListener('load', res, { once: true });
+      img.addEventListener('error', res, { once: true });
+    });
+    canvas.style.backgroundImage = `url("${miniOf(w)}")`;
     canvas.append(img);
     if (mat) tilt.append(mat);
     tilt.append(canvas, sheen);
@@ -522,7 +623,7 @@ body {
     el.addEventListener('click', () => { if (!suppressClick) { interact(); goNearest(i); } });
     el.addEventListener('focus', () => { if (!pointerActive) { interact(); goNearest(i); } });
     track.append(el);
-    return { el, tilt, mat, canvas, img, requested: false };
+    return { el, tilt, mat, canvas, img, loaded, requested: false };
   });
   // Les images se chargent à l'approche, pas toutes d'un coup.
   function ensureImage(i) {
@@ -785,11 +886,11 @@ body {
   }
 
   // ---------- Défilement automatique ----------
-  let readingCaption = false;
+  let readingCaption = false, ready = false;
   captions.addEventListener('pointerover', () => { readingCaption = true; });
   captions.addEventListener('pointerout', e => { if (!captions.contains(e.relatedTarget)) readingCaption = false; });
   setInterval(() => {
-    if (document.hidden || drag || tween || springOn || readingCaption) return;
+    if (!ready || document.hidden || drag || tween || springOn || readingCaption) return;
     const now = performance.now();
     if (now - lastInteract < IDLE || now - lastArrive < DWELL) return;
     autoAdvance();
@@ -915,7 +1016,7 @@ body {
 
   // ---------- Clavier ----------
   addEventListener('keydown', e => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!ready || e.altKey || e.ctrlKey || e.metaKey) return;
     const k = e.key;
     if (k === 'ArrowRight' || k === 'PageDown') go(target + 1);
     else if (k === 'ArrowLeft' || k === 'PageUp') go(target - 1);
@@ -937,6 +1038,54 @@ body {
   computeGeometry();
   setCurrent(target, false);
   render();
+
+  // ---------- Écran d'accueil ----------
+  // Il reste au moins le temps de lire le nom et de voir passer les œuvres, puis s'efface dès que
+  // les miniatures et les tableaux visibles au centre sont chargés (au plus 9 s, même sur un réseau lent).
+  const intro = document.getElementById('intro');
+  const introWorks = document.getElementById('intro-works');
+  const introCount = document.getElementById('intro-count');
+  const introStart = performance.now();
+  const MIN_INTRO = reduceMotion.matches ? 900 : 2600, MAX_INTRO = 9000;
+  const pad2 = n => String(n).padStart(2, '0');
+  let shown = 0;
+  introCount.textContent = `${pad2(0)} / ${pad2(N)}`;
+  const minis = WORKS.map((w, i) => {
+    const m = document.createElement('span');
+    m.className = 'mini';
+    m.dataset.frame = w.frame;
+    m.style.setProperty('--r', (w.w / w.h).toFixed(4));
+    const im = new Image();
+    im.alt = '';
+    im.decoding = 'async';
+    const done = new Promise(res => {
+      im.addEventListener('load', res, { once: true });
+      im.addEventListener('error', res, { once: true });
+    });
+    im.src = miniOf(w);
+    m.append(im);
+    introWorks.append(m);
+    if (i === N / 2 - 1) introWorks.append(Object.assign(document.createElement('span'), { className: 'intro-break' }));
+    // Chaque œuvre arrive à son tour, une fois chargée.
+    done.then(() => {
+      const wait = Math.max(0, introStart + 250 + i * 110 - performance.now());
+      setTimeout(() => {
+        m.classList.add('is-in');
+        introCount.textContent = `${pad2(++shown)} / ${pad2(N)}`;
+      }, wait);
+    });
+    return done;
+  });
+  const centre = works.filter((_, i) => Math.abs(wrap(i - target)) <= 2).map(w => w.loaded);
+  Promise.race([Promise.all([...minis, ...centre]), new Promise(r => setTimeout(r, MAX_INTRO))])
+    .then(() => new Promise(r => setTimeout(r, Math.max(0, introStart + MIN_INTRO - performance.now()))))
+    .then(() => {
+      ready = true;
+      lastInteract = lastArrive = performance.now();
+      document.body.classList.add('is-ready');
+      intro.classList.add('is-done');
+      setTimeout(() => { intro.hidden = true; }, 900);
+    });
 
   let resizeRaf = 0;
   addEventListener('resize', () => {
