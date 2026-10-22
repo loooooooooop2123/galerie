@@ -5,22 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cimaise</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Galerie d'art minimaliste : huit tableaux à parcourir d'un glissement, chacun signé de la main de son artiste.">
+<meta name="description" content="Galerie d'art minimaliste : seize tableaux qui défilent en boucle, chacun signé de la main de son artiste.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap">
 <style>
 /* Hallmark · macrostructure: bespoke (cimaise en coverflow, d'après la maquette) · tone: austere · anchor hue: none (les tableaux portent la couleur)
  * Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
- * Mise en page : un mur blanc, une rangée horizontale de tableaux centrée, le tableau actif net au centre,
- * les voisins réduits et légèrement flous de chaque côté, la signature et le cartel sous l'œuvre active.
+ * Mise en page : un mur blanc, une rangée horizontale de tableaux en boucle, le tableau actif net au centre,
+ * les voisins réduits de chaque côté sous un flou progressif de bord (comme les listes de ONE),
+ * la signature et la description fixes sous la rangée.
  */
 :root {
   color-scheme: light;
   --wall: oklch(99.3% 0.002 90);
   --ink: oklch(21% 0.008 70);
   --ink-soft: oklch(41% 0.008 70);
-  --ink-faint: oklch(60% 0.006 70);
   --placeholder: oklch(88% 0.003 90);
   --shadow-near: oklch(20% 0.01 60 / 0.10);
   --shadow-far: oklch(20% 0.01 60 / 0.36);
@@ -47,6 +47,7 @@
 
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body {
+  margin: 0;
   background: var(--wall);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -65,6 +66,8 @@ body {
 }
 .gallery.is-dragging { cursor: grabbing; }
 
+#track { position: absolute; inset: 0; }
+
 /* ---------- Tableaux ---------- */
 .work {
   position: absolute;
@@ -74,7 +77,7 @@ body {
   border: 0;
   background: var(--frame);
   transform-origin: 50% 50%;
-  will-change: transform, filter, opacity;
+  will-change: transform, opacity;
   cursor: pointer;
   box-shadow:
     0 1px 2px var(--shadow-near),
@@ -130,17 +133,70 @@ body {
 }
 .canvas img.is-loaded { opacity: 1; }
 
-/* ---------- Cartels ---------- */
+/* ---------- Flou progressif des bords (repris de ONE) ----------
+   Un seul bandeau par côté, qui s'épaissit vers le bord puis se fond dans le mur :
+   jamais un flou par tableau. */
+.edge {
+  position: absolute;
+  top: 0;
+  width: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+.edge-left { left: 0; }
+.edge-right { right: 0; }
+.edge > i {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.edge > i:nth-child(1) { -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px); }
+.edge > i:nth-child(2) { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.edge > i:nth-child(3) { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+
+.edge-left > i:nth-child(1) {
+  -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-left > i:nth-child(2) {
+  -webkit-mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-left > i:nth-child(3) {
+  -webkit-mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-left > i:nth-child(4) {
+  background: linear-gradient(to left, transparent 50%, color-mix(in oklab, var(--wall) 65%, transparent) 84%, var(--wall) 100%);
+}
+.edge-right > i:nth-child(1) {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-right > i:nth-child(2) {
+  -webkit-mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-right > i:nth-child(3) {
+  -webkit-mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+  mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+}
+.edge-right > i:nth-child(4) {
+  background: linear-gradient(to right, transparent 50%, color-mix(in oklab, var(--wall) 65%, transparent) 84%, var(--wall) 100%);
+}
+
+/* ---------- Signature et description : fixes, seule l'opacité change ---------- */
 .captions {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
+  z-index: 160;
   display: grid;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   pointer-events: none;
-  will-change: transform;
 }
 .cap {
   grid-area: 1 / 1;
@@ -189,16 +245,6 @@ body {
   text-wrap: pretty;
 }
 
-.cartel {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.4;
-  letter-spacing: 0.04em;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-  text-wrap: balance;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -207,6 +253,7 @@ body {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+.defs { position: absolute; width: 0; height: 0; }
 
 @media (max-width: 520px) {
   .text { font-size: 14px; line-height: 1.5; }
@@ -223,9 +270,18 @@ body {
 
 <main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
   <div id="track"></div>
+  <div class="edge edge-left" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="edge edge-right" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="captions" id="captions"></div>
   <p class="sr-only" id="status" aria-live="polite"></p>
 </main>
+
+<!-- Flou de mouvement horizontal, appliqué à la rangée seulement pendant qu'elle bouge -->
+<svg class="defs" aria-hidden="true" focusable="false">
+  <filter id="mblur" x="-5%" y="0" width="110%" height="100%" color-interpolation-filters="sRGB">
+    <feGaussianBlur id="mblur-g" stdDeviation="0 0"></feGaussianBlur>
+  </filter>
+</svg>
 
 <script>
 (() => {
@@ -236,56 +292,96 @@ body {
       id: 'joconde', artist: 'Léonard de Vinci', title: 'La Joconde', date: 'vers 1503–1519',
       img: 'oeuvres/joconde.jpg', w: 1074, h: 1600, frame: 'or',
       sig: 'signatures/vinci.svg', sr: 5.55,
-      cartel: 'Huile sur panneau de peuplier · 77 × 53 cm · Musée du Louvre, Paris',
       text: "Lisa Gherardini, épouse d'un marchand de soie florentin, pose devant un paysage imaginaire de rochers et de rivières. Léonard peint sans contours : le sfumato fond les ombres et laisse le sourire en suspens, impossible à fixer. Il y cherche la vie intérieure de son modèle, cet instant fugace entre deux expressions."
+    },
+    {
+      id: 'ecole-d-athenes', artist: 'Raphaël', title: "L'École d'Athènes", date: '1509–1511',
+      img: 'oeuvres/raphael.jpg', w: 1600, h: 998, frame: 'or',
+      sig: 'signatures/raphael.svg', sr: 2.30,
+      text: "Sous de grandes voûtes inspirées de l'Antiquité, Raphaël réunit les philosophes grecs en une seule assemblée. Au centre, Platon montre le ciel et Aristote désigne la terre : le monde des idées face à celui de l'expérience. Autour d'eux, on débat, on écrit, on mesure. La fresque célèbre le savoir comme une conversation qui traverse les siècles."
+    },
+    {
+      id: 'chasseurs-dans-la-neige', artist: 'Pieter Bruegel l’Ancien', title: 'Les Chasseurs dans la neige', date: '1565',
+      img: 'oeuvres/bruegel.jpg', w: 1600, h: 1138, frame: 'chene',
+      sig: 'signatures/bruegel.svg', sr: 5.83,
+      text: "Trois chasseurs rentrent au village avec leurs chiens, presque bredouilles, un seul renard sur le dos. En contrebas, la vallée gelée s'anime : on patine, on joue, on travaille. Bruegel peint le cycle des saisons et la vie ordinaire des paysans, petite et tenace face à un hiver immense, sous un ciel vert et froid."
+    },
+    {
+      id: 'vocation-de-saint-matthieu', artist: 'Le Caravage', title: 'La Vocation de saint Matthieu', date: '1599–1600',
+      img: 'oeuvres/caravage.jpg', w: 1600, h: 1510, frame: 'noyer',
+      sig: 'signatures/caravage.svg', sr: 4.75,
+      text: "Dans une salle sombre, des collecteurs d'impôts comptent leur argent. Le Christ entre à droite et désigne Matthieu, qui va tout quitter pour le suivre. Un rayon de lumière traverse la pièce en suivant son geste. Le Caravage transpose une scène sacrée dans la Rome de son temps et fait de la lumière le signe de l'appel divin."
     },
     {
       id: 'ronde-de-nuit', artist: 'Rembrandt', title: 'La Ronde de nuit', date: '1642',
       img: 'oeuvres/ronde.jpg', w: 1600, h: 1302, frame: 'ebene',
       sig: 'signatures/rembrandt.svg', sr: 3.68,
-      cartel: 'Huile sur toile · 363 × 437 cm · Rijksmuseum, Amsterdam',
       text: "Une compagnie de la milice d'Amsterdam commande un portrait de groupe. Rembrandt en fait une scène d'action : le capitaine donne l'ordre de marche, les hommes s'animent, une fillette baignée de lumière traverse la foule. Le titre vient du vernis, noirci avec le temps. La scène se passe en plein jour."
     },
     {
       id: 'jeune-fille-a-la-perle', artist: 'Johannes Vermeer', title: 'La Jeune Fille à la perle', date: 'vers 1665',
       img: 'oeuvres/perle.jpg', w: 1280, h: 1516, frame: 'ebene',
       sig: 'signatures/vermeer.svg', sr: 2.31,
-      cartel: 'Huile sur toile · 44,5 × 39 cm · Mauritshuis, La Haye',
       text: "Une jeune fille inconnue se retourne vers nous, les lèvres entrouvertes, comme surprise par notre présence. Vermeer peint une « tronie », une étude de visage coiffée d'un turban exotique, sans modèle identifié. Sur le fond sombre, il peint surtout la lumière : le reflet de la perle, l'éclat humide de l'œil, le bleu outremer du turban."
+    },
+    {
+      id: 'tres-de-mayo', artist: 'Francisco de Goya', title: 'Tres de mayo', date: '1814',
+      img: 'oeuvres/goya.jpg', w: 1600, h: 1234, frame: 'or',
+      sig: 'signatures/goya.svg', sr: 1.72,
+      text: "Le 3 mai 1808, au lendemain d'un soulèvement à Madrid, les soldats de Napoléon fusillent des civils. Goya oppose une rangée de soldats sans visage à un homme en chemise blanche qui lève les bras, éclairé par une lanterne, comme un martyr. Il ne peint aucun héros glorieux, seulement la violence de la guerre et ses victimes."
+    },
+    {
+      id: 'voyageur', artist: 'Caspar David Friedrich', title: 'Le Voyageur contemplant une mer de nuages', date: 'vers 1817',
+      img: 'oeuvres/friedrich.jpg', w: 1256, h: 1600, frame: 'noyer',
+      sig: 'signatures/friedrich.svg', sr: 3.69,
+      text: "Un homme vu de dos se tient sur un rocher, face à une mer de brouillard d'où émergent des sommets. Nous ne voyons pas son visage : nous regardons le paysage avec lui. Friedrich, figure du romantisme allemand, peint la solitude devant l'immensité de la nature, entre vertige, contemplation et sentiment du sublime."
     },
     {
       id: 'grande-vague', artist: 'Katsushika Hokusai', title: 'La Grande Vague de Kanagawa', date: 'vers 1830–1832',
       img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia', mat: true,
       sig: 'signatures/hokusai.png', sr: 0.37,
-      cartel: 'Gravure sur bois polychrome · 25,7 × 37,9 cm · Metropolitan Museum of Art, New York',
       text: "Une vague immense se dresse au-dessus de trois barques de pêcheurs, prête à s'abattre. Au loin, le mont Fuji paraît minuscule, presque une vague de plus. Hokusai oppose la force de la nature à la fragilité des hommes, et l'instant à la permanence de la montagne sacrée. Le bleu de Prusse, venu d'Europe, était alors une nouveauté au Japon."
+    },
+    {
+      id: 'pluie-vapeur-vitesse', artist: 'William Turner', title: 'Pluie, vapeur et vitesse', date: '1844',
+      img: 'oeuvres/turner.jpg', w: 1600, h: 1200, frame: 'or',
+      sig: 'signatures/turner.svg', sr: 1.04,
+      text: "Une locomotive du Great Western Railway fonce vers nous sur un pont au-dessus de la Tamise, à travers la pluie. Les contours se dissolvent dans la lumière et la vapeur. Un lièvre court devant le train, minuscule. Turner peint la vitesse de l'ère industrielle et réduit le paysage à une sensation de mouvement."
     },
     {
       id: 'impression-soleil-levant', artist: 'Claude Monet', title: 'Impression, soleil levant', date: '1872',
       img: 'oeuvres/impression.jpg', w: 1600, h: 1240, frame: 'or',
       sig: 'signatures/monet.svg', sr: 6.97,
-      cartel: 'Huile sur toile · 48 × 63 cm · Musée Marmottan Monet, Paris',
       text: "Le port du Havre au petit matin, vu depuis la fenêtre d'un hôtel. Quelques touches rapides suffisent : des grues et des cheminées dans la brume, deux barques sombres, un soleil orange qui se reflète dans l'eau. Monet saisit une sensation de lumière plus qu'un lieu. Moqué par un critique en 1874, le titre a donné son nom à l'impressionnisme."
+    },
+    {
+      id: 'bar-aux-folies-bergere', artist: 'Édouard Manet', title: 'Un bar aux Folies Bergère', date: '1882',
+      img: 'oeuvres/manet.jpg', w: 1600, h: 1196, frame: 'or',
+      sig: 'signatures/manet.svg', sr: 1.65,
+      text: "Une serveuse, Suzon, se tient derrière le comptoir d'un célèbre café-concert parisien. Le miroir derrière elle reflète la salle, les lumières et un client, mais le reflet ne correspond pas tout à fait à la scène. Dans ce dernier grand tableau, Manet montre la solitude d'une femme au milieu de la foule et de la vie moderne."
     },
     {
       id: 'nuit-etoilee', artist: 'Vincent van Gogh', title: 'La Nuit étoilée', date: '1889',
       img: 'oeuvres/nuit.jpg', w: 1600, h: 1266, frame: 'chene',
       sig: 'signatures/vangogh.svg', sr: 2.47,
-      cartel: 'Huile sur toile · 73,7 × 92,1 cm · Museum of Modern Art, New York',
       text: "Depuis l'asile de Saint-Rémy-de-Provence, où il s'est fait admettre, Van Gogh peint la vue de sa fenêtre avant l'aube. Le village, lui, est inventé. Le ciel tourbillonne, les étoiles brûlent, un cyprès monte comme une flamme noire. Il peint la nuit telle qu'il la ressent : une nature vivante, en mouvement, où l'émotion compte plus que l'exactitude."
     },
     {
       id: 'le-cri', artist: 'Edvard Munch', title: 'Le Cri', date: '1893',
       img: 'oeuvres/cri.jpg', w: 1280, h: 1589, frame: 'noyer',
       sig: 'signatures/munch.svg', sr: 3.03,
-      cartel: 'Tempera et pastel sur carton · 91 × 73,5 cm · Nasjonalmuseet, Oslo',
       text: "Munch se souvient d'une promenade au coucher du soleil au-dessus du fjord d'Oslo. Le ciel vire au rouge sang et il dit avoir senti un cri infini traverser la nature. La figure, les mains contre le visage, ondule avec le paysage, tandis que deux passants s'éloignent sans rien voir. Munch donne une forme visible à l'angoisse."
+    },
+    {
+      id: 'joueurs-de-cartes', artist: 'Paul Cézanne', title: 'Les Joueurs de cartes', date: 'vers 1890–1895',
+      img: 'oeuvres/cezanne.jpg', w: 1600, h: 1312, frame: 'chene',
+      sig: 'signatures/cezanne.svg', sr: 2.50,
+      text: "Deux paysans d'Aix-en-Provence jouent aux cartes, face à face, absorbés et silencieux. Cézanne construit la scène comme une architecture : la bouteille au centre partage la toile, les corps forment des volumes solides. Il cherche à rendre la permanence et la gravité des choses simples, au-delà de l'instant."
     },
     {
       id: 'le-baiser', artist: 'Gustav Klimt', title: 'Le Baiser', date: '1907–1908',
       img: 'oeuvres/baiser.jpg', w: 1280, h: 1284, frame: 'or',
       sig: 'signatures/klimt.png', sr: 2.70,
-      cartel: "Huile et feuille d'or sur toile · 180 × 180 cm · Belvédère, Vienne",
       text: "Un couple enlacé au bord d'un pré fleuri, enveloppé dans un même manteau d'or. Le vêtement de l'homme se couvre de rectangles noirs et blancs, celui de la femme de cercles colorés et de fleurs, deux motifs qui se fondent en une seule forme. Au sommet de sa période dorée, Klimt fait de l'amour une icône, entre extase et vertige."
     }
   ];
@@ -296,20 +392,39 @@ body {
   };
 
   const N = WORKS.length;
+  const R = 4;              // nombre de voisins disposés de chaque côté
+  const IDLE = 5000;        // calme demandé avant que la galerie reparte seule
+  const DWELL = 6500;       // temps passé sur chaque tableau en défilement automatique
+  const SLIDE = 1900;       // durée d'un glissement automatique
+
   const stage = document.getElementById('gallery');
   const track = document.getElementById('track');
   const captions = document.getElementById('captions');
   const status = document.getElementById('status');
+  const edges = [...document.querySelectorAll('.edge')];
+  const mblur = document.getElementById('mblur-g');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp = (a, b, t) => a + (b - a) * t;
+  const mod = (a, n) => ((a % n) + n) % n;
+  // Écart signé le plus court sur la boucle, dans [-N/2, N/2)
+  const wrap = a => { const m = mod(a, N); return m >= N / 2 ? m - N : m; };
   // Échelle des voisins : 1 · 0,71 · 0,38 · 0,22… (proportions de la maquette)
   const scaleAt = d => 1 / (1 + 0.4 * d * d);
-  const blurAt = d => 1.5 * Math.pow(Math.min(d, 3), 0.85);
-  const opacityAt = d => clamp((3.3 - d) / 1.2, 0, 1);
+  const opacityAt = d => clamp(3.5 - d, 0, 1);
+  const easeInOut = u => 0.5 - Math.cos(Math.PI * u) / 2;
+
+  // Typographie française : espaces fines insécables avant : ; ! ? et dans les guillemets.
+  const fr = s => s
+    .replace(/ ([:;!?»])/g, ' $1')
+    .replace(/« /g, '« ')
+    .replace(/vers (\d)/g, 'vers $1');
+  const de = name => /^[aeiouyéèh]/i.test(name) ? "d'" + name : 'de ' + name;
 
   // ---------- DOM ----------
+  let suppressClick = false, pointerActive = false;
+
   const works = WORKS.map((w, i) => {
     const el = document.createElement('button');
     el.type = 'button';
@@ -323,33 +438,29 @@ body {
     img.draggable = false;
     img.decoding = 'async';
     img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
-    img.src = w.img;
-    if (img.complete) img.classList.add('is-loaded');
     canvas.append(img);
     if (mat) el.append(mat);
     el.append(canvas);
-    el.addEventListener('click', () => { if (!suppressClick) go(i); });
-    el.addEventListener('focus', () => { if (!pointerActive) go(i); });
+    el.addEventListener('click', () => { if (!suppressClick) { interact(); goNearest(i); } });
+    el.addEventListener('focus', () => { if (!pointerActive) { interact(); goNearest(i); } });
     track.append(el);
-    return { el, mat, canvas };
+    return { el, mat, canvas, img, requested: false };
   });
-
-  // Typographie française : espaces fines insécables avant : ; ! ? et dans les guillemets, mesures insécables.
-  const fr = s => s
-    .replace(/ ([:;!?»])/g, ' $1')
-    .replace(/« /g, '« ')
-    .replace(/(\d) × (\d)/g, '$1 × $2')
-    .replace(/ cm\b/g, ' cm')
-    .replace(/vers (\d)/g, 'vers $1');
+  // Les images se chargent à l'approche, pas toutes d'un coup.
+  function ensureImage(i) {
+    const w = works[i];
+    if (w.requested) return;
+    w.requested = true;
+    w.img.src = WORKS[i].img;
+  }
 
   const caps = WORKS.map(w => {
     const cap = document.createElement('div');
     cap.className = 'cap';
     cap.innerHTML = `
-      <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${/^[aeiouyéè]/i.test(w.artist) ? "d'" : 'de '}${w.artist}" draggable="false"></div>
+      <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${de(w.artist)}" draggable="false"></div>
       <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>
-      <p class="text">${fr(w.text)}</p>
-      <p class="cartel">${fr(w.cartel)}</p>`;
+      <p class="text">${fr(w.text)}</p>`;
     captions.append(cap);
     return { cap, sig: cap.querySelector('.sig'), ratio: w.sr };
   });
@@ -402,7 +513,7 @@ body {
       let oh = ph + 2 * (t + m);
       if (ow > maxW) {
         const k = maxW / ow;
-        pw *= k; ph *= k; t *= k; m *= k; ow *= k; oh *= k;
+        t *= k; m *= k; ow *= k; oh *= k;
       }
       return { ow, oh, t, m };
     });
@@ -410,15 +521,21 @@ body {
     const cy = Math.max(pad + maxOH / 2, Math.min(vh / 2, vh - pad - capH - gapCap - maxOH / 2));
     const G = 0.15 * H0;
 
-    // Disposition « au repos » pour chaque tableau actif n, puis interpolation entre deux repos.
+    // Disposition « au repos » autour de chaque tableau central n (voisins -R…R, en boucle),
+    // puis interpolation entre deux repos pendant le mouvement.
     const layouts = [];
     for (let n = 0; n < N; n++) {
-      const s = sizes.map((_, i) => scaleAt(Math.abs(i - n)));
-      const x = new Array(N).fill(0);
-      for (let i = n + 1; i < N; i++)
-        x[i] = x[i - 1] + (sizes[i - 1].ow * s[i - 1] + sizes[i].ow * s[i]) / 2 + G * (s[i - 1] + s[i]) / 2;
-      for (let i = n - 1; i >= 0; i--)
-        x[i] = x[i + 1] - (sizes[i + 1].ow * s[i + 1] + sizes[i].ow * s[i]) / 2 - G * (s[i + 1] + s[i]) / 2;
+      const s = [], x = [];
+      for (let k = -R; k <= R; k++) s[k + R] = scaleAt(Math.abs(k));
+      x[R] = 0;
+      for (let k = 1; k <= R; k++) {
+        const a = sizes[mod(n + k - 1, N)], b = sizes[mod(n + k, N)];
+        x[R + k] = x[R + k - 1] + (a.ow * s[R + k - 1] + b.ow * s[R + k]) / 2 + G * (s[R + k - 1] + s[R + k]) / 2;
+      }
+      for (let k = -1; k >= -R; k--) {
+        const a = sizes[mod(n + k + 1, N)], b = sizes[mod(n + k, N)];
+        x[R + k] = x[R + k + 1] - (a.ow * s[R + k + 1] + b.ow * s[R + k]) / 2 - G * (s[R + k + 1] + s[R + k]) / 2;
+      }
       layouts.push({ x, s });
     }
 
@@ -426,58 +543,67 @@ body {
       const { el, mat, canvas } = works[i];
       el.style.width = sz.ow + 'px';
       el.style.height = sz.oh + 'px';
-      if (mat) Object.assign(mat.style, { inset: sz.t + 'px' });
-      const inner = sz.t + sz.m;
-      Object.assign(canvas.style, { inset: inner + 'px' });
+      if (mat) mat.style.inset = sz.t + 'px';
+      canvas.style.inset = (sz.t + sz.m) + 'px';
     });
 
-    geo = { vw, vh, H0, cy, gapCap, sizes, layouts };
+    // Le texte ne suit pas les tableaux : il reste à la même place, quel que soit le format affiché.
+    const capTop = cy + maxOH / 2 + gapCap;
+    captions.style.transform = `translate3d(0, ${capTop.toFixed(1)}px, 0)`;
+    for (const e of edges) e.style.height = (capTop + 24).toFixed(1) + 'px';
+
+    geo = { vw, vh, H0, cy, G, sizes, layouts };
   }
 
-  // Distance (en px) entre le centre du tableau n et celui de son voisin : sert au glisser.
+  // Distance moyenne (px) entre le tableau n et ses voisins : convertit un glissement en tableaux.
   function spacingAt(n) {
-    const L = geo.layouts[n];
-    return n < N - 1 ? L.x[n + 1] - L.x[n] : L.x[n] - L.x[n - 1];
+    const L = geo.layouts[mod(n, N)];
+    return (L.x[R + 1] - L.x[R - 1]) / 2;
   }
 
   // ---------- Rendu ----------
-  let p = 0, v = 0, target = 0;
+  let p = 0;
 
   function render() {
-    const { vw, cy, gapCap, sizes, layouts } = geo;
-    const q = clamp(p, 0, N - 1);
-    const n = Math.min(Math.floor(q), N - 2);
-    const t = q - n;
-    const A = layouts[n], B = layouts[n + 1];
-    // Élastique au-delà du premier et du dernier tableau
-    const over = p < 0 ? -p * spacingAt(0) : p > N - 1 ? -(p - (N - 1)) * spacingAt(N - 1) : 0;
+    const { vw, cy, G, sizes, layouts } = geo;
+    const n = Math.floor(p);
+    const t = p - n;
+    const A = layouts[mod(n, N)], B = layouts[mod(n + 1, N)];
 
     for (let i = 0; i < N; i++) {
-      const sz = sizes[i];
-      const s = lerp(A.s[i], B.s[i], t);
-      const x = lerp(A.x[i], B.x[i], t) + over;
-      const d = Math.abs(i - p);
-      const o = opacityAt(d);
-      const blur = blurAt(d) / s;
+      const k0 = Math.round(wrap(i - n));
+      const k1 = k0 - 1;
+      const d = Math.abs(k0 - t);
       const st = works[i].el.style;
-      st.transform = `translate3d(${(vw / 2 + x - sz.ow / 2).toFixed(2)}px, ${(cy - sz.oh / 2).toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
-      st.filter = blur > 0.08 ? `blur(${blur.toFixed(2)}px)` : 'none';
-      st.opacity = o.toFixed(3);
-      st.visibility = o > 0.01 ? 'visible' : 'hidden';
-      st.zIndex = String(100 - Math.round(d * 10));
+      const inRange = Math.abs(k0) <= R && Math.abs(k1) <= R;
+      const o = inRange ? opacityAt(d) : 0;
+      if (o <= 0.001) {
+        if (st.visibility !== 'hidden') st.visibility = 'hidden';
+      } else {
+        const sz = sizes[i];
+        const s = lerp(A.s[k0 + R], B.s[k1 + R], t);
+        const x = lerp(A.x[k0 + R], B.x[k1 + R], t);
+        st.transform = `translate3d(${(vw / 2 + x - sz.ow / 2).toFixed(2)}px, ${(cy - sz.oh / 2).toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
+        st.opacity = o.toFixed(3);
+        st.visibility = 'visible';
+        st.zIndex = String(100 - Math.round(d * 10));
+      }
+      if (d < 5.5) ensureImage(i);
 
       const c = caps[i].cap.style;
       const co = clamp(1 - d * 1.8, 0, 1);
       c.opacity = co.toFixed(3);
       c.visibility = co > 0.01 ? 'visible' : 'hidden';
-      c.transform = `translate3d(${((i - p) * 22).toFixed(2)}px, 0, 0)`;
     }
-    const oh = lerp(sizes[n].oh, sizes[n + 1].oh, t);
-    captions.style.transform = `translate3d(0, ${(cy + oh / 2 + gapCap).toFixed(2)}px, 0)`;
+
+    // Les bandeaux de flou s'arrêtent juste avant le tableau actif, qui reste net.
+    const ow = lerp(sizes[mod(n, N)].ow, sizes[mod(n + 1, N)].ow, t);
+    const band = Math.max(0, vw / 2 - ow / 2 - G * 0.5);
+    for (const e of edges) e.style.width = band.toFixed(1) + 'px';
   }
 
   let current = -1;
-  function setCurrent(i) {
+  function setCurrent(i, announce) {
     if (i === current) return;
     current = i;
     works.forEach((w, k) => {
@@ -487,68 +613,125 @@ body {
       c.cap.classList.toggle('is-active', k === i);
       c.cap.setAttribute('aria-hidden', k === i ? 'false' : 'true');
     });
-    const w = WORKS[i];
-    status.textContent = `Tableau ${i + 1} sur ${N} : ${w.title}, ${w.artist}`;
+    if (announce) status.textContent = `${WORKS[i].title}, ${WORKS[i].artist}`;
   }
 
-  // ---------- Mouvement (ressort amorti critique) ----------
-  let raf = 0, last = 0;
-  const K = 150, C = 2 * Math.sqrt(K);
-
-  function loop(now) {
-    // Pas fixes : le mouvement garde la même durée, quelle que soit la cadence d'affichage.
-    let left = Math.min(0.25, (now - last) / 1000);
-    last = now;
-    while (left > 0) {
-      const dt = Math.min(left, 1 / 240);
-      v += (-K * (p - target) - C * v) * dt;
-      p += v * dt;
-      left -= dt;
-    }
-    if (Math.abs(p - target) < 0.0004 && Math.abs(v) < 0.002) {
-      p = target; v = 0; raf = 0;
-      render();
+  // ---------- Flou de mouvement ----------
+  let mbOn = false;
+  function setMotionBlur(pxPerSecond) {
+    const sd = reduceMotion.matches ? 0 : Math.min(12, Math.abs(pxPerSecond) * 0.02);
+    if (sd < 0.3) {
+      if (mbOn) { track.style.filter = 'none'; mbOn = false; }
       return;
     }
+    mblur.setAttribute('stdDeviation', sd.toFixed(2) + ' 0');
+    if (!mbOn) { track.style.filter = 'url(#mblur)'; mbOn = true; }
+  }
+
+  // ---------- Mouvement ----------
+  // Trois moteurs : le doigt (glisser), un ressort amorti (clic, clavier, molette, lâcher),
+  // et un glissement lent et régulier pour le défilement automatique.
+  let target = 0, v = 0, springOn = false, tween = null, drag = null;
+  let raf = 0, last = 0, vel = 0;
+  let lastInteract = performance.now(), lastArrive = performance.now();
+  const K = 150, C = 2 * Math.sqrt(K);
+
+  function arrived() { lastArrive = performance.now(); }
+
+  function frame(now) {
+    const dt = clamp((now - last) / 1000, 0.001, 0.25);
+    last = now;
+    const prev = p;
+
+    if (drag && drag.active) {
+      p = drag.rawP;
+    } else if (tween) {
+      const u = clamp((now - tween.t0) / tween.dur, 0, 1);
+      p = tween.from + (tween.to - tween.from) * easeInOut(u);
+      if (u >= 1) { p = tween.to; tween = null; v = 0; arrived(); }
+    } else if (springOn) {
+      // Pas fixes : le mouvement garde la même durée, quelle que soit la cadence d'affichage.
+      let left = dt;
+      while (left > 0) {
+        const h = Math.min(left, 1 / 240);
+        v += (-K * (p - target) - C * v) * h;
+        p += v * h;
+        left -= h;
+      }
+      if (Math.abs(p - target) < 0.0004 && Math.abs(v) < 0.002) { p = target; v = 0; springOn = false; arrived(); }
+    }
+
+    vel += ((p - prev) / dt - vel) * (1 - Math.exp(-dt * 16));
+    setMotionBlur(vel * spacingAt(Math.round(p)));
+    if (drag && drag.active) setCurrent(mod(Math.round(p), N), false);
     render();
-    raf = requestAnimationFrame(loop);
+
+    const busy = (drag && drag.active) || tween || springOn || Math.abs(vel) > 0.01;
+    if (busy) raf = requestAnimationFrame(frame);
+    else { raf = 0; vel = 0; setMotionBlur(0); }
   }
-  function animate() {
-    if (reduceMotion.matches) { p = target; v = 0; render(); return; }
-    if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
+  function kick() {
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
   }
-  function go(i) {
-    target = clamp(Math.round(i), 0, N - 1);
-    setCurrent(target);
-    animate();
+
+  function go(to) {
+    if (tween) { v = vel; tween = null; }
+    target = Math.round(to);
+    setCurrent(mod(target, N), true);
+    if (reduceMotion.matches) { p = target; v = 0; springOn = false; render(); arrived(); return; }
+    springOn = true;
+    kick();
   }
+  // Vers le tableau i par le chemin le plus court de la boucle
+  function goNearest(i) {
+    const base = (springOn || tween) ? target : Math.round(p);
+    go(base + wrap(i - base));
+  }
+  function interact() { lastInteract = performance.now(); }
+
+  function autoAdvance() {
+    const to = Math.round(p) + 1;
+    target = to;
+    setCurrent(mod(to, N), false);
+    if (reduceMotion.matches) { p = to; render(); arrived(); return; }
+    tween = { from: p, to, t0: performance.now(), dur: SLIDE };
+    springOn = false;
+    kick();
+  }
+
+  // ---------- Défilement automatique ----------
+  let readingCaption = false;
+  captions.addEventListener('pointerover', () => { readingCaption = true; });
+  captions.addEventListener('pointerout', e => { if (!captions.contains(e.relatedTarget)) readingCaption = false; });
+  setInterval(() => {
+    if (document.hidden || drag || tween || springOn || readingCaption) return;
+    const now = performance.now();
+    if (now - lastInteract < IDLE || now - lastArrive < DWELL) return;
+    autoAdvance();
+  }, 200);
 
   // ---------- Glisser (souris, doigt, stylet) ----------
-  let pointerActive = false, drag = null, suppressClick = false;
-
   stage.addEventListener('pointerdown', e => {
     if (e.button !== 0 || e.target.closest('.cap.is-active')) return;
+    interact();
     pointerActive = true;
-    drag = { id: e.pointerId, x0: e.clientX, p0: p, spacing: spacingAt(clamp(Math.round(p), 0, N - 1)), active: false, samples: [] };
+    drag = { id: e.pointerId, x0: e.clientX, p0: p, rawP: p, spacing: spacingAt(Math.round(p)), active: false, samples: [] };
   });
   function follow(e) {
     const dx = e.clientX - drag.x0;
     if (!drag.active) {
       if (Math.abs(dx) < 5) return;
       drag.active = true;
+      drag.p0 = p;
       if (e.type === 'pointermove') stage.setPointerCapture(e.pointerId);
       stage.classList.add('is-dragging');
-      cancelAnimationFrame(raf); raf = 0; v = 0;
+      tween = null; springOn = false; v = 0;
+      kick();
     }
-    let raw = drag.p0 - dx / drag.spacing;
-    if (raw < 0) raw *= 0.3;
-    else if (raw > N - 1) raw = N - 1 + (raw - (N - 1)) * 0.3;
-    p = raw;
+    drag.rawP = drag.p0 - dx / drag.spacing;
     const now = performance.now();
-    drag.samples.push({ t: now, p });
+    drag.samples.push({ t: now, p: drag.rawP });
     while (drag.samples.length > 2 && now - drag.samples[0].t > 90) drag.samples.shift();
-    setCurrent(clamp(Math.round(p), 0, N - 1));
-    render();
   }
   stage.addEventListener('pointermove', e => {
     if (drag && e.pointerId === drag.id) follow(e);
@@ -556,23 +739,25 @@ body {
   function endDrag(e) {
     if (!drag || e.pointerId !== drag.id) return;
     if (e.type === 'pointerup') follow(e);
-    const wasActive = drag.active;
-    const s = drag.samples;
+    interact();
+    const d = drag;
     drag = null;
     pointerActive = false;
     stage.classList.remove('is-dragging');
-    if (!wasActive) return;
+    if (!d.active) return;
     suppressClick = true;
     setTimeout(() => { suppressClick = false; }, 0);
-    let vel = 0;
+    p = d.rawP;
+    let speed = 0;
+    const s = d.samples;
     if (s.length > 1) {
       const a = s[0], b = s[s.length - 1];
-      if (b.t - a.t > 0 && performance.now() - b.t < 120) vel = (b.p - a.p) / ((b.t - a.t) / 1000);
+      if (b.t - a.t > 0 && performance.now() - b.t < 120) speed = (b.p - a.p) / ((b.t - a.t) / 1000);
     }
     // Un geste vif avance d'un seul tableau ; un glisser lent se pose sur le plus proche.
     let to = Math.round(p);
-    if (Math.abs(vel) > 0.8) to = vel > 0 ? Math.floor(p) + 1 : Math.ceil(p) - 1;
-    v = clamp(vel, -6, 6);
+    if (Math.abs(speed) > 0.8) to = speed > 0 ? Math.floor(p) + 1 : Math.ceil(p) - 1;
+    v = clamp(speed, -6, 6);
     go(to);
   }
   stage.addEventListener('pointerup', endDrag);
@@ -582,6 +767,7 @@ body {
   let wheelAcc = 0, wheelLock = 0, wheelMag = 0, wheelReset = 0;
   stage.addEventListener('wheel', e => {
     e.preventDefault();
+    interact();
     const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     const px = e.deltaMode === 1 ? raw * 16 : raw;
     const mag = Math.abs(px);
@@ -608,17 +794,16 @@ body {
   addEventListener('keydown', e => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const k = e.key;
-    let to = null;
-    if (k === 'ArrowRight' || k === 'PageDown') to = target + 1;
-    else if (k === 'ArrowLeft' || k === 'PageUp') to = target - 1;
-    else if (k === 'Home') to = 0;
-    else if (k === 'End') to = N - 1;
-    if (to === null) return;
+    if (k === 'ArrowRight' || k === 'PageDown') go(target + 1);
+    else if (k === 'ArrowLeft' || k === 'PageUp') go(target - 1);
+    else if (k === 'Home') goNearest(0);
+    else if (k === 'End') goNearest(N - 1);
+    else return;
     e.preventDefault();
-    go(to);
+    interact();
     if (stage.contains(document.activeElement) && document.activeElement.classList.contains('work')) {
       pointerActive = true;
-      works[target].el.focus({ preventScroll: true });
+      works[mod(target, N)].el.focus({ preventScroll: true });
       pointerActive = false;
     }
   });
@@ -627,7 +812,7 @@ body {
   const fromHash = WORKS.findIndex(w => '#' + w.id === location.hash);
   p = target = Math.max(0, fromHash);
   computeGeometry();
-  setCurrent(target);
+  setCurrent(target, false);
   render();
 
   let resizeRaf = 0;
@@ -636,15 +821,6 @@ body {
     resizeRaf = requestAnimationFrame(() => { computeGeometry(); render(); });
   });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { computeGeometry(); render(); });
-
-  // Une seule invitation discrète à glisser, si le visiteur n'a encore rien touché.
-  let touched = false;
-  ['pointerdown', 'wheel', 'keydown'].forEach(t => addEventListener(t, () => { touched = true; }, { once: true, capture: true }));
-  setTimeout(() => {
-    if (touched || reduceMotion.matches || target !== 0) return;
-    v = 3.2;
-    animate();
-  }, 1400);
 })();
 </script>
 </body>
