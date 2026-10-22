@@ -13,8 +13,9 @@ Signatures recadrées ; celles de Klimt et d'Hokusai détourées en PNG transpar
 
 ## Musique
 
-La musique démarre à la fin de l'écran d'accueil. Si le navigateur refuse le son avant un premier geste,
-elle part au premier clic, toucher ou appui de touche. Un bouton discret, en bas à droite, la coupe ou la relance ;
+Quand le chargement est fini, « Entrer » apparaît sur l'écran d'accueil : ce clic (ou la touche Entrée) ouvre la
+galerie et lance la musique, ce que tous les navigateurs autorisent puisque c'est un geste du visiteur.
+Un bouton discret, en bas à droite, la coupe ou la relance ;
 un visiteur qui la coupe ne l'entend plus repartir seule (choix gardé dans le navigateur).
 Volume bas, montée en 3 s, arrêt en 1,5 s, fondu de 4 s entre les pièces, pause quand l'onglet passe en arrière-plan.
 
