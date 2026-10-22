@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cimaise</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Galerie d'art minimaliste : huit tableaux à parcourir d'un glissement, chacun signé de la main de son artiste.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap">
+<style>
+/* Hallmark · macrostructure: bespoke (cimaise en coverflow, d'après la maquette) · tone: austere · anchor hue: none (les tableaux portent la couleur)
+ * Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+ * Mise en page : un mur blanc, une rangée horizontale de tableaux centrée, le tableau actif net au centre,
+ * les voisins réduits et légèrement flous de chaque côté, la signature et le cartel sous l'œuvre active.
+ */
+:root {
+  color-scheme: light;
+  --wall: oklch(99.3% 0.002 90);
+  --ink: oklch(21% 0.008 70);
+  --ink-soft: oklch(41% 0.008 70);
+  --ink-faint: oklch(60% 0.006 70);
+  --placeholder: oklch(88% 0.003 90);
+  --shadow-near: oklch(20% 0.01 60 / 0.10);
+  --shadow-far: oklch(20% 0.01 60 / 0.36);
+  --rabbet: oklch(15% 0.01 60 / 0.35);
+
+  /* Cadres : un matériau par œuvre */
+  --or-clair: oklch(80% 0.075 86);
+  --or-fonce: oklch(57% 0.085 73);
+  --ebene: oklch(19% 0.008 60);
+  --ebene-reflet: oklch(30% 0.01 60);
+  --noyer: oklch(33% 0.035 48);
+  --noyer-reflet: oklch(42% 0.04 52);
+  --chene: oklch(60% 0.055 68);
+  --chene-reflet: oklch(68% 0.05 72);
+  --paulownia: oklch(86% 0.03 82);
+  --paulownia-reflet: oklch(91% 0.022 84);
+  --passe-partout: oklch(97.5% 0.006 85);
+
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gallery {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  outline: none;
+}
+.gallery.is-dragging { cursor: grabbing; }
+
+/* ---------- Tableaux ---------- */
+.work {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  background: var(--frame);
+  transform-origin: 50% 50%;
+  will-change: transform, filter, opacity;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px var(--shadow-near),
+    0 26px 44px -26px var(--shadow-far);
+  -webkit-tap-highlight-color: transparent;
+}
+.gallery.is-dragging .work { cursor: grabbing; }
+.work[aria-current="true"] { cursor: inherit; }
+.work:focus-visible { outline: 2px solid var(--ink); outline-offset: 8px; }
+
+.work[data-frame="or"] {
+  --frame: linear-gradient(135deg, var(--or-clair), var(--or-fonce) 48%, var(--or-clair) 74%, var(--or-fonce));
+}
+.work[data-frame="ebene"] {
+  --frame: linear-gradient(135deg, var(--ebene-reflet), var(--ebene) 40%, var(--ebene));
+}
+.work[data-frame="noyer"] {
+  --frame: linear-gradient(135deg, var(--noyer-reflet), var(--noyer) 45%, var(--noyer));
+}
+.work[data-frame="chene"] {
+  --frame: linear-gradient(135deg, var(--chene-reflet), var(--chene) 50%, var(--chene));
+}
+.work[data-frame="paulownia"] {
+  --frame: linear-gradient(135deg, var(--paulownia-reflet), var(--paulownia));
+}
+
+.mat {
+  position: absolute;
+  background: var(--passe-partout);
+  box-shadow: inset 0 0 0 1px var(--shadow-near);
+}
+.canvas {
+  position: absolute;
+  overflow: hidden;
+  background: var(--placeholder);
+}
+.canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1px var(--rabbet), inset 0 1px 3px var(--rabbet);
+  pointer-events: none;
+}
+.canvas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 600ms var(--ease-out);
+  -webkit-user-drag: none;
+}
+.canvas img.is-loaded { opacity: 1; }
+
+/* ---------- Cartels ---------- */
+.captions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: grid;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+  will-change: transform;
+}
+.cap {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  min-width: 0;
+}
+.cap.is-active { pointer-events: auto; user-select: text; -webkit-user-select: text; cursor: auto; }
+
+.sig-row {
+  height: var(--sig-row, 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sig {
+  display: block;
+  max-width: none;
+  object-fit: contain;
+  opacity: 0.86;
+  -webkit-user-drag: none;
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.meta cite { font-family: var(--font-serif); font-size: 15px; font-weight: 400; letter-spacing: 0; }
+.meta .date { font-weight: 400; color: var(--ink-soft); }
+
+.text {
+  margin: 0;
+  max-width: 33rem;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.cartel {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .text { font-size: 14px; line-height: 1.5; }
+  .meta { font-size: 12.5px; }
+  .meta cite { font-size: 14px; }
+  .cap { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .canvas img { transition-duration: 150ms; }
+}
+</style>
+</head>
+<body>
+
+<main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
+  <div id="track"></div>
+  <div class="captions" id="captions"></div>
+  <p class="sr-only" id="status" aria-live="polite"></p>
+</main>
+
+<script>
+(() => {
+  document.documentElement.lang = 'fr';
+
+  const WORKS = [
+    {
+      id: 'joconde', artist: 'Léonard de Vinci', title: 'La Joconde', date: 'vers 1503–1519',
+      img: 'oeuvres/joconde.jpg', w: 1074, h: 1600, frame: 'or',
+      sig: 'signatures/vinci.svg', sr: 5.55,
+      cartel: 'Huile sur panneau de peuplier · 77 × 53 cm · Musée du Louvre, Paris',
+      text: "Lisa Gherardini, épouse d'un marchand de soie florentin, pose devant un paysage imaginaire de rochers et de rivières. Léonard peint sans contours : le sfumato fond les ombres et laisse le sourire en suspens, impossible à fixer. Il y cherche la vie intérieure de son modèle, cet instant fugace entre deux expressions."
+    },
+    {
+      id: 'ronde-de-nuit', artist: 'Rembrandt', title: 'La Ronde de nuit', date: '1642',
+      img: 'oeuvres/ronde.jpg', w: 1600, h: 1302, frame: 'ebene',
+      sig: 'signatures/rembrandt.svg', sr: 3.68,
+      cartel: 'Huile sur toile · 363 × 437 cm · Rijksmuseum, Amsterdam',
+      text: "Une compagnie de la milice d'Amsterdam commande un portrait de groupe. Rembrandt en fait une scène d'action : le capitaine donne l'ordre de marche, les hommes s'animent, une fillette baignée de lumière traverse la foule. Le titre vient du vernis, noirci avec le temps. La scène se passe en plein jour."
+    },
+    {
+      id: 'jeune-fille-a-la-perle', artist: 'Johannes Vermeer', title: 'La Jeune Fille à la perle', date: 'vers 1665',
+      img: 'oeuvres/perle.jpg', w: 1280, h: 1516, frame: 'ebene',
+      sig: 'signatures/vermeer.svg', sr: 2.31,
+      cartel: 'Huile sur toile · 44,5 × 39 cm · Mauritshuis, La Haye',
+      text: "Une jeune fille inconnue se retourne vers nous, les lèvres entrouvertes, comme surprise par notre présence. Vermeer peint une « tronie », une étude de visage coiffée d'un turban exotique, sans modèle identifié. Sur le fond sombre, il peint surtout la lumière : le reflet de la perle, l'éclat humide de l'œil, le bleu outremer du turban."
+    },
+    {
+      id: 'grande-vague', artist: 'Katsushika Hokusai', title: 'La Grande Vague de Kanagawa', date: 'vers 1830–1832',
+      img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia', mat: true,
+      sig: 'signatures/hokusai.png', sr: 0.37,
+      cartel: 'Gravure sur bois polychrome · 25,7 × 37,9 cm · Metropolitan Museum of Art, New York',
+      text: "Une vague immense se dresse au-dessus de trois barques de pêcheurs, prête à s'abattre. Au loin, le mont Fuji paraît minuscule, presque une vague de plus. Hokusai oppose la force de la nature à la fragilité des hommes, et l'instant à la permanence de la montagne sacrée. Le bleu de Prusse, venu d'Europe, était alors une nouveauté au Japon."
+    },
+    {
+      id: 'impression-soleil-levant', artist: 'Claude Monet', title: 'Impression, soleil levant', date: '1872',
+      img: 'oeuvres/impression.jpg', w: 1600, h: 1240, frame: 'or',
+      sig: 'signatures/monet.svg', sr: 6.97,
+      cartel: 'Huile sur toile · 48 × 63 cm · Musée Marmottan Monet, Paris',
+      text: "Le port du Havre au petit matin, vu depuis la fenêtre d'un hôtel. Quelques touches rapides suffisent : des grues et des cheminées dans la brume, deux barques sombres, un soleil orange qui se reflète dans l'eau. Monet saisit une sensation de lumière plus qu'un lieu. Moqué par un critique en 1874, le titre a donné son nom à l'impressionnisme."
+    },
+    {
+      id: 'nuit-etoilee', artist: 'Vincent van Gogh', title: 'La Nuit étoilée', date: '1889',
+      img: 'oeuvres/nuit.jpg', w: 1600, h: 1266, frame: 'chene',
+      sig: 'signatures/vangogh.svg', sr: 2.47,
+      cartel: 'Huile sur toile · 73,7 × 92,1 cm · Museum of Modern Art, New York',
+      text: "Depuis l'asile de Saint-Rémy-de-Provence, où il s'est fait admettre, Van Gogh peint la vue de sa fenêtre avant l'aube. Le village, lui, est inventé. Le ciel tourbillonne, les étoiles brûlent, un cyprès monte comme une flamme noire. Il peint la nuit telle qu'il la ressent : une nature vivante, en mouvement, où l'émotion compte plus que l'exactitude."
+    },
+    {
+      id: 'le-cri', artist: 'Edvard Munch', title: 'Le Cri', date: '1893',
+      img: 'oeuvres/cri.jpg', w: 1280, h: 1589, frame: 'noyer',
+      sig: 'signatures/munch.svg', sr: 3.03,
+      cartel: 'Tempera et pastel sur carton · 91 × 73,5 cm · Nasjonalmuseet, Oslo',
+      text: "Munch se souvient d'une promenade au coucher du soleil au-dessus du fjord d'Oslo. Le ciel vire au rouge sang et il dit avoir senti un cri infini traverser la nature. La figure, les mains contre le visage, ondule avec le paysage, tandis que deux passants s'éloignent sans rien voir. Munch donne une forme visible à l'angoisse."
+    },
+    {
+      id: 'le-baiser', artist: 'Gustav Klimt', title: 'Le Baiser', date: '1907–1908',
+      img: 'oeuvres/baiser.jpg', w: 1280, h: 1284, frame: 'or',
+      sig: 'signatures/klimt.png', sr: 2.70,
+      cartel: "Huile et feuille d'or sur toile · 180 × 180 cm · Belvédère, Vienne",
+      text: "Un couple enlacé au bord d'un pré fleuri, enveloppé dans un même manteau d'or. Le vêtement de l'homme se couvre de rectangles noirs et blancs, celui de la femme de cercles colorés et de fleurs, deux motifs qui se fondent en une seule forme. Au sommet de sa période dorée, Klimt fait de l'amour une icône, entre extase et vertige."
+    }
+  ];
+
+  // Épaisseur du cadre et du passe-partout, en fraction de la racine de la surface peinte.
+  const FRAMES = {
+    or: { t: 0.032 }, ebene: { t: 0.026 }, noyer: { t: 0.024 }, chene: { t: 0.022 }, paulownia: { t: 0.016, m: 0.075 }
+  };
+
+  const N = WORKS.length;
+  const stage = document.getElementById('gallery');
+  const track = document.getElementById('track');
+  const captions = document.getElementById('captions');
+  const status = document.getElementById('status');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  // Échelle des voisins : 1 · 0,71 · 0,38 · 0,22… (proportions de la maquette)
+  const scaleAt = d => 1 / (1 + 0.4 * d * d);
+  const blurAt = d => 1.5 * Math.pow(Math.min(d, 3), 0.85);
+  const opacityAt = d => clamp((3.3 - d) / 1.2, 0, 1);
+
+  // ---------- DOM ----------
+  const works = WORKS.map((w, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'work';
+    el.dataset.frame = w.frame;
+    el.setAttribute('aria-label', `${w.title}, ${w.artist}`);
+    const mat = w.mat ? Object.assign(document.createElement('span'), { className: 'mat' }) : null;
+    const canvas = Object.assign(document.createElement('span'), { className: 'canvas' });
+    const img = new Image();
+    img.alt = '';
+    img.draggable = false;
+    img.decoding = 'async';
+    img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
+    img.src = w.img;
+    if (img.complete) img.classList.add('is-loaded');
+    canvas.append(img);
+    if (mat) el.append(mat);
+    el.append(canvas);
+    el.addEventListener('click', () => { if (!suppressClick) go(i); });
+    el.addEventListener('focus', () => { if (!pointerActive) go(i); });
+    track.append(el);
+    return { el, mat, canvas };
+  });
+
+  // Typographie française : espaces fines insécables avant : ; ! ? et dans les guillemets, mesures insécables.
+  const fr = s => s
+    .replace(/ ([:;!?»])/g, ' $1')
+    .replace(/« /g, '« ')
+    .replace(/(\d) × (\d)/g, '$1 × $2')
+    .replace(/ cm\b/g, ' cm')
+    .replace(/vers (\d)/g, 'vers $1');
+
+  const caps = WORKS.map(w => {
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.innerHTML = `
+      <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${/^[aeiouyéè]/i.test(w.artist) ? "d'" : 'de '}${w.artist}" draggable="false"></div>
+      <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>
+      <p class="text">${fr(w.text)}</p>
+      <p class="cartel">${fr(w.cartel)}</p>`;
+    captions.append(cap);
+    return { cap, sig: cap.querySelector('.sig'), ratio: w.sr };
+  });
+
+  // ---------- Géométrie ----------
+  let geo = null;
+
+  function sizeSignatures(H0, vw) {
+    const k = clamp(H0 / 320, 0.78, 1.12);
+    const row = Math.round(66 * k);
+    const area = 5400 * k * k;
+    const maxW = Math.min(230 * k, vw - 40);
+    captions.style.setProperty('--sig-row', row + 'px');
+    for (const c of caps) {
+      let h = Math.min(row, Math.sqrt(area / c.ratio));
+      let w = h * c.ratio;
+      if (w > maxW) { w = maxW; h = w / c.ratio; }
+      c.sig.style.width = w.toFixed(1) + 'px';
+      c.sig.style.height = h.toFixed(1) + 'px';
+    }
+  }
+
+  function computeGeometry() {
+    const vw = stage.clientWidth;
+    const vh = stage.clientHeight;
+    const pad = clamp(vh * 0.045, 16, 44);
+    const gapCap = clamp(vh * 0.032, 14, 24);
+    const narrow = vw < 640;
+
+    let H0 = geo ? geo.H0 : Math.min(vh * 0.43, 320);
+    let capH = 0;
+    for (let pass = 0; pass < 2; pass++) {
+      sizeSignatures(H0, vw);
+      capH = captions.offsetHeight;
+      const avail = vh - 2 * pad - gapCap - capH;
+      H0 = Math.max(72, Math.min(vh * 0.43, avail / 1.1, (narrow ? 0.64 : 0.5) * vw / 0.72));
+    }
+
+    const area = 0.7 * H0 * H0;
+    const unit = Math.sqrt(area);
+    const maxW = narrow ? vw * 0.76 : Math.min(vw * 0.46, H0 * 1.75);
+    const sizes = WORKS.map(w => {
+      const r = w.w / w.h;
+      const f = FRAMES[w.frame];
+      let ph = Math.sqrt(area / r);
+      let pw = ph * r;
+      let t = Math.max(3, f.t * unit);
+      let m = f.m ? f.m * unit : 0;
+      let ow = pw + 2 * (t + m);
+      let oh = ph + 2 * (t + m);
+      if (ow > maxW) {
+        const k = maxW / ow;
+        pw *= k; ph *= k; t *= k; m *= k; ow *= k; oh *= k;
+      }
+      return { ow, oh, t, m };
+    });
+    const maxOH = Math.max(...sizes.map(s => s.oh));
+    const cy = Math.max(pad + maxOH / 2, Math.min(vh / 2, vh - pad - capH - gapCap - maxOH / 2));
+    const G = 0.15 * H0;
+
+    // Disposition « au repos » pour chaque tableau actif n, puis interpolation entre deux repos.
+    const layouts = [];
+    for (let n = 0; n < N; n++) {
+      const s = sizes.map((_, i) => scaleAt(Math.abs(i - n)));
+      const x = new Array(N).fill(0);
+      for (let i = n + 1; i < N; i++)
+        x[i] = x[i - 1] + (sizes[i - 1].ow * s[i - 1] + sizes[i].ow * s[i]) / 2 + G * (s[i - 1] + s[i]) / 2;
+      for (let i = n - 1; i >= 0; i--)
+        x[i] = x[i + 1] - (sizes[i + 1].ow * s[i + 1] + sizes[i].ow * s[i]) / 2 - G * (s[i + 1] + s[i]) / 2;
+      layouts.push({ x, s });
+    }
+
+    sizes.forEach((sz, i) => {
+      const { el, mat, canvas } = works[i];
+      el.style.width = sz.ow + 'px';
+      el.style.height = sz.oh + 'px';
+      if (mat) Object.assign(mat.style, { inset: sz.t + 'px' });
+      const inner = sz.t + sz.m;
+      Object.assign(canvas.style, { inset: inner + 'px' });
+    });
+
+    geo = { vw, vh, H0, cy, gapCap, sizes, layouts };
+  }
+
+  // Distance (en px) entre le centre du tableau n et celui de son voisin : sert au glisser.
+  function spacingAt(n) {
+    const L = geo.layouts[n];
+    return n < N - 1 ? L.x[n + 1] - L.x[n] : L.x[n] - L.x[n - 1];
+  }
+
+  // ---------- Rendu ----------
+  let p = 0, v = 0, target = 0;
+
+  function render() {
+    const { vw, cy, gapCap, sizes, layouts } = geo;
+    const q = clamp(p, 0, N - 1);
+    const n = Math.min(Math.floor(q), N - 2);
+    const t = q - n;
+    const A = layouts[n], B = layouts[n + 1];
+    // Élastique au-delà du premier et du dernier tableau
+    const over = p < 0 ? -p * spacingAt(0) : p > N - 1 ? -(p - (N - 1)) * spacingAt(N - 1) : 0;
+
+    for (let i = 0; i < N; i++) {
+      const sz = sizes[i];
+      const s = lerp(A.s[i], B.s[i], t);
+      const x = lerp(A.x[i], B.x[i], t) + over;
+      const d = Math.abs(i - p);
+      const o = opacityAt(d);
+      const blur = blurAt(d) / s;
+      const st = works[i].el.style;
+      st.transform = `translate3d(${(vw / 2 + x - sz.ow / 2).toFixed(2)}px, ${(cy - sz.oh / 2).toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
+      st.filter = blur > 0.08 ? `blur(${blur.toFixed(2)}px)` : 'none';
+      st.opacity = o.toFixed(3);
+      st.visibility = o > 0.01 ? 'visible' : 'hidden';
+      st.zIndex = String(100 - Math.round(d * 10));
+
+      const c = caps[i].cap.style;
+      const co = clamp(1 - d * 1.8, 0, 1);
+      c.opacity = co.toFixed(3);
+      c.visibility = co > 0.01 ? 'visible' : 'hidden';
+      c.transform = `translate3d(${((i - p) * 22).toFixed(2)}px, 0, 0)`;
+    }
+    const oh = lerp(sizes[n].oh, sizes[n + 1].oh, t);
+    captions.style.transform = `translate3d(0, ${(cy + oh / 2 + gapCap).toFixed(2)}px, 0)`;
+  }
+
+  let current = -1;
+  function setCurrent(i) {
+    if (i === current) return;
+    current = i;
+    works.forEach((w, k) => {
+      if (k === i) w.el.setAttribute('aria-current', 'true'); else w.el.removeAttribute('aria-current');
+    });
+    caps.forEach((c, k) => {
+      c.cap.classList.toggle('is-active', k === i);
+      c.cap.setAttribute('aria-hidden', k === i ? 'false' : 'true');
+    });
+    const w = WORKS[i];
+    status.textContent = `Tableau ${i + 1} sur ${N} : ${w.title}, ${w.artist}`;
+  }
+
+  // ---------- Mouvement (ressort amorti critique) ----------
+  let raf = 0, last = 0;
+  const K = 150, C = 2 * Math.sqrt(K);
+
+  function loop(now) {
+    // Pas fixes : le mouvement garde la même durée, quelle que soit la cadence d'affichage.
+    let left = Math.min(0.25, (now - last) / 1000);
+    last = now;
+    while (left > 0) {
+      const dt = Math.min(left, 1 / 240);
+      v += (-K * (p - target) - C * v) * dt;
+      p += v * dt;
+      left -= dt;
+    }
+    if (Math.abs(p - target) < 0.0004 && Math.abs(v) < 0.002) {
+      p = target; v = 0; raf = 0;
+      render();
+      return;
+    }
+    render();
+    raf = requestAnimationFrame(loop);
+  }
+  function animate() {
+    if (reduceMotion.matches) { p = target; v = 0; render(); return; }
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
+  }
+  function go(i) {
+    target = clamp(Math.round(i), 0, N - 1);
+    setCurrent(target);
+    animate();
+  }
+
+  // ---------- Glisser (souris, doigt, stylet) ----------
+  let pointerActive = false, drag = null, suppressClick = false;
+
+  stage.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('.cap.is-active')) return;
+    pointerActive = true;
+    drag = { id: e.pointerId, x0: e.clientX, p0: p, spacing: spacingAt(clamp(Math.round(p), 0, N - 1)), active: false, samples: [] };
+  });
+  function follow(e) {
+    const dx = e.clientX - drag.x0;
+    if (!drag.active) {
+      if (Math.abs(dx) < 5) return;
+      drag.active = true;
+      if (e.type === 'pointermove') stage.setPointerCapture(e.pointerId);
+      stage.classList.add('is-dragging');
+      cancelAnimationFrame(raf); raf = 0; v = 0;
+    }
+    let raw = drag.p0 - dx / drag.spacing;
+    if (raw < 0) raw *= 0.3;
+    else if (raw > N - 1) raw = N - 1 + (raw - (N - 1)) * 0.3;
+    p = raw;
+    const now = performance.now();
+    drag.samples.push({ t: now, p });
+    while (drag.samples.length > 2 && now - drag.samples[0].t > 90) drag.samples.shift();
+    setCurrent(clamp(Math.round(p), 0, N - 1));
+    render();
+  }
+  stage.addEventListener('pointermove', e => {
+    if (drag && e.pointerId === drag.id) follow(e);
+  });
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (e.type === 'pointerup') follow(e);
+    const wasActive = drag.active;
+    const s = drag.samples;
+    drag = null;
+    pointerActive = false;
+    stage.classList.remove('is-dragging');
+    if (!wasActive) return;
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 0);
+    let vel = 0;
+    if (s.length > 1) {
+      const a = s[0], b = s[s.length - 1];
+      if (b.t - a.t > 0 && performance.now() - b.t < 120) vel = (b.p - a.p) / ((b.t - a.t) / 1000);
+    }
+    // Un geste vif avance d'un seul tableau ; un glisser lent se pose sur le plus proche.
+    let to = Math.round(p);
+    if (Math.abs(vel) > 0.8) to = vel > 0 ? Math.floor(p) + 1 : Math.ceil(p) - 1;
+    v = clamp(vel, -6, 6);
+    go(to);
+  }
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+
+  // ---------- Molette et pavé tactile ----------
+  let wheelAcc = 0, wheelLock = 0, wheelMag = 0, wheelReset = 0;
+  stage.addEventListener('wheel', e => {
+    e.preventDefault();
+    const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    const px = e.deltaMode === 1 ? raw * 16 : raw;
+    const mag = Math.abs(px);
+    const now = performance.now();
+    clearTimeout(wheelReset);
+    wheelReset = setTimeout(() => { wheelAcc = 0; wheelMag = 0; }, 200);
+    if (now < wheelLock) {
+      // L'inertie d'un pavé tactile décroît : on la laisse s'éteindre sans changer de tableau.
+      if (mag < wheelMag * 0.98 || mag < 4) wheelLock = now + 120;
+      wheelMag = mag;
+      return;
+    }
+    wheelAcc += px;
+    wheelMag = mag;
+    if (Math.abs(wheelAcc) >= 40) {
+      const dir = Math.sign(wheelAcc);
+      wheelAcc = 0;
+      wheelLock = now + 380;
+      go(target + dir);
+    }
+  }, { passive: false });
+
+  // ---------- Clavier ----------
+  addEventListener('keydown', e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const k = e.key;
+    let to = null;
+    if (k === 'ArrowRight' || k === 'PageDown') to = target + 1;
+    else if (k === 'ArrowLeft' || k === 'PageUp') to = target - 1;
+    else if (k === 'Home') to = 0;
+    else if (k === 'End') to = N - 1;
+    if (to === null) return;
+    e.preventDefault();
+    go(to);
+    if (stage.contains(document.activeElement) && document.activeElement.classList.contains('work')) {
+      pointerActive = true;
+      works[target].el.focus({ preventScroll: true });
+      pointerActive = false;
+    }
+  });
+
+  // ---------- Démarrage ----------
+  const fromHash = WORKS.findIndex(w => '#' + w.id === location.hash);
+  p = target = Math.max(0, fromHash);
+  computeGeometry();
+  setCurrent(target);
+  render();
+
+  let resizeRaf = 0;
+  addEventListener('resize', () => {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => { computeGeometry(); render(); });
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { computeGeometry(); render(); });
+
+  // Une seule invitation discrète à glisser, si le visiteur n'a encore rien touché.
+  let touched = false;
+  ['pointerdown', 'wheel', 'keydown'].forEach(t => addEventListener(t, () => { touched = true; }, { once: true, capture: true }));
+  setTimeout(() => {
+    if (touched || reduceMotion.matches || target !== 0) return;
+    v = 3.2;
+    animate();
+  }, 1400);
+})();
+</script>
+</body>
+</html>
