@@ -151,39 +151,40 @@ body {
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
 }
-.edge > i:nth-child(1) { -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px); }
-.edge > i:nth-child(2) { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
-.edge > i:nth-child(3) { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+/* Flou léger, puis le mur reprend : les tableaux lointains s'effacent au lieu de rester en taches floues. */
+.edge > i:nth-child(1) { -webkit-backdrop-filter: blur(0.8px); backdrop-filter: blur(0.8px); }
+.edge > i:nth-child(2) { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.edge > i:nth-child(3) { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 
 .edge-left > i:nth-child(1) {
-  -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to left, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-left > i:nth-child(2) {
-  -webkit-mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to left, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-left > i:nth-child(3) {
-  -webkit-mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-left > i:nth-child(4) {
-  background: linear-gradient(to left, transparent 50%, color-mix(in oklab, var(--wall) 65%, transparent) 84%, var(--wall) 100%);
+  background: linear-gradient(to left, transparent 35%, color-mix(in oklab, var(--wall) 75%, transparent) 70%, var(--wall) 92%);
 }
 .edge-right > i:nth-child(1) {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-right > i:nth-child(2) {
-  -webkit-mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to right, transparent 25%, #000 60%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-right > i:nth-child(3) {
-  -webkit-mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
-  mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 56px);
+  -webkit-mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
+  mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-right > i:nth-child(4) {
-  background: linear-gradient(to right, transparent 50%, color-mix(in oklab, var(--wall) 65%, transparent) 84%, var(--wall) 100%);
+  background: linear-gradient(to right, transparent 35%, color-mix(in oklab, var(--wall) 75%, transparent) 70%, var(--wall) 92%);
 }
 
 /* ---------- Signature et description : fixes, seule l'opacité change ---------- */
@@ -393,8 +394,8 @@ body {
 
   const N = WORKS.length;
   const R = 4;              // nombre de voisins disposés de chaque côté
-  const IDLE = 5000;        // calme demandé avant que la galerie reparte seule
-  const DWELL = 6500;       // temps passé sur chaque tableau en défilement automatique
+  const IDLE = 3000;        // calme demandé avant que la galerie reparte seule
+  const DWELL = 2500;       // arrêt sur chaque tableau en défilement automatique (au moins 2 s)
   const SLIDE = 1900;       // durée d'un glissement automatique
 
   const stage = document.getElementById('gallery');
@@ -412,7 +413,7 @@ body {
   const wrap = a => { const m = mod(a, N); return m >= N / 2 ? m - N : m; };
   // Échelle des voisins : 1 · 0,71 · 0,38 · 0,22… (proportions de la maquette)
   const scaleAt = d => 1 / (1 + 0.4 * d * d);
-  const opacityAt = d => clamp(3.5 - d, 0, 1);
+  const opacityAt = d => clamp((3 - d) / 0.8, 0, 1);
   const easeInOut = u => 0.5 - Math.cos(Math.PI * u) / 2;
 
   // Typographie française : espaces fines insécables avant : ; ! ? et dans les guillemets.
@@ -481,6 +482,7 @@ body {
       c.sig.style.width = w.toFixed(1) + 'px';
       c.sig.style.height = h.toFixed(1) + 'px';
     }
+    return row;
   }
 
   function computeGeometry() {
@@ -491,9 +493,9 @@ body {
     const narrow = vw < 640;
 
     let H0 = geo ? geo.H0 : Math.min(vh * 0.43, 320);
-    let capH = 0;
+    let capH = 0, sigRow = 0;
     for (let pass = 0; pass < 2; pass++) {
-      sizeSignatures(H0, vw);
+      sigRow = sizeSignatures(H0, vw);
       capH = captions.offsetHeight;
       const avail = vh - 2 * pad - gapCap - capH;
       H0 = Math.max(72, Math.min(vh * 0.43, avail / 1.1, (narrow ? 0.64 : 0.5) * vw / 0.72));
@@ -550,7 +552,8 @@ body {
     // Le texte ne suit pas les tableaux : il reste à la même place, quel que soit le format affiché.
     const capTop = cy + maxOH / 2 + gapCap;
     captions.style.transform = `translate3d(0, ${capTop.toFixed(1)}px, 0)`;
-    for (const e of edges) e.style.height = (capTop + 24).toFixed(1) + 'px';
+    // Les bandeaux descendent sous les tableaux et leurs ombres, sans toucher au texte (la signature est au centre).
+    for (const e of edges) e.style.height = (capTop + sigRow).toFixed(1) + 'px';
 
     geo = { vw, vh, H0, cy, G, sizes, layouts };
   }
@@ -619,8 +622,8 @@ body {
   // ---------- Flou de mouvement ----------
   let mbOn = false;
   function setMotionBlur(pxPerSecond) {
-    const sd = reduceMotion.matches ? 0 : Math.min(12, Math.abs(pxPerSecond) * 0.02);
-    if (sd < 0.3) {
+    const sd = reduceMotion.matches ? 0 : Math.min(2.5, Math.abs(pxPerSecond) * 0.006);
+    if (sd < 0.25) {
       if (mbOn) { track.style.filter = 'none'; mbOn = false; }
       return;
     }
