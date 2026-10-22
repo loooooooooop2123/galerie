@@ -75,15 +75,41 @@ body {
   top: 0;
   padding: 0;
   border: 0;
-  background: var(--frame);
+  background: none;
   transform-origin: 50% 50%;
   will-change: transform, opacity;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Le cadre lui-même : c'est lui qui s'incline sous la souris, la position reste sur .work */
+.tilt {
+  position: absolute;
+  inset: 0;
+  background: var(--frame);
   box-shadow:
     0 1px 2px var(--shadow-near),
     0 26px 44px -26px var(--shadow-far);
-  -webkit-tap-highlight-color: transparent;
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--lift, 1));
+  transition: transform 700ms var(--ease-out), box-shadow 700ms var(--ease-out);
 }
+.work.is-hover .tilt {
+  --lift: 1.02;
+  box-shadow:
+    0 2px 4px var(--shadow-near),
+    0 36px 56px -30px var(--shadow-far);
+  transition-duration: 160ms, 400ms;
+}
+/* Reflet de vitre qui suit la souris */
+.sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), oklch(100% 0 0 / 0.55), transparent 55%);
+  mix-blend-mode: soft-light;
+  transition: opacity 500ms var(--ease-out);
+}
+.work.is-hover .sheen { opacity: 1; }
 .gallery.is-dragging .work { cursor: grabbing; }
 .work[aria-current="true"] { cursor: inherit; }
 .work:focus-visible { outline: 2px solid var(--ink); outline-offset: 8px; }
@@ -431,21 +457,25 @@ body {
     el.type = 'button';
     el.className = 'work';
     el.dataset.frame = w.frame;
+    el.dataset.i = i;
     el.setAttribute('aria-label', `${w.title}, ${w.artist}`);
+    const tilt = Object.assign(document.createElement('span'), { className: 'tilt' });
     const mat = w.mat ? Object.assign(document.createElement('span'), { className: 'mat' }) : null;
     const canvas = Object.assign(document.createElement('span'), { className: 'canvas' });
+    const sheen = Object.assign(document.createElement('span'), { className: 'sheen' });
     const img = new Image();
     img.alt = '';
     img.draggable = false;
     img.decoding = 'async';
     img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
     canvas.append(img);
-    if (mat) el.append(mat);
-    el.append(canvas);
+    if (mat) tilt.append(mat);
+    tilt.append(canvas, sheen);
+    el.append(tilt);
     el.addEventListener('click', () => { if (!suppressClick) { interact(); goNearest(i); } });
     el.addEventListener('focus', () => { if (!pointerActive) { interact(); goNearest(i); } });
     track.append(el);
-    return { el, mat, canvas, img, requested: false };
+    return { el, tilt, mat, canvas, img, requested: false };
   });
   // Les images se chargent à l'approche, pas toutes d'un coup.
   function ensureImage(i) {
@@ -637,7 +667,8 @@ body {
   let target = 0, v = 0, springOn = false, tween = null, drag = null;
   let raf = 0, last = 0, vel = 0;
   let lastInteract = performance.now(), lastArrive = performance.now();
-  const K = 150, C = 2 * Math.sqrt(K);
+  // Ressort souple : la rangée met près d'une seconde à se poser, comme un objet lourd.
+  const K = 70, C = 2 * Math.sqrt(K);
 
   function arrived() { lastArrive = performance.now(); }
 
@@ -647,7 +678,8 @@ body {
     const prev = p;
 
     if (drag && drag.active) {
-      p = drag.rawP;
+      // La rangée suit la main avec un léger retard : elle a du poids.
+      p += (drag.rawP - p) * (1 - Math.exp(-dt * 10));
     } else if (tween) {
       const u = clamp((now - tween.t0) / tween.dur, 0, 1);
       p = tween.from + (tween.to - tween.from) * easeInOut(u);
@@ -697,6 +729,7 @@ body {
     target = to;
     setCurrent(mod(to, N), false);
     if (reduceMotion.matches) { p = to; render(); arrived(); return; }
+    unhover();
     tween = { from: p, to, t0: performance.now(), dur: SLIDE };
     springOn = false;
     kick();
@@ -729,6 +762,7 @@ body {
       if (e.type === 'pointermove') stage.setPointerCapture(e.pointerId);
       stage.classList.add('is-dragging');
       tween = null; springOn = false; v = 0;
+      unhover();
       kick();
     }
     drag.rawP = drag.p0 - dx / drag.spacing;
@@ -750,7 +784,6 @@ body {
     if (!d.active) return;
     suppressClick = true;
     setTimeout(() => { suppressClick = false; }, 0);
-    p = d.rawP;
     let speed = 0;
     const s = d.samples;
     if (s.length > 1) {
@@ -758,13 +791,51 @@ body {
       if (b.t - a.t > 0 && performance.now() - b.t < 120) speed = (b.p - a.p) / ((b.t - a.t) / 1000);
     }
     // Un geste vif avance d'un seul tableau ; un glisser lent se pose sur le plus proche.
-    let to = Math.round(p);
-    if (Math.abs(speed) > 0.8) to = speed > 0 ? Math.floor(p) + 1 : Math.ceil(p) - 1;
-    v = clamp(speed, -6, 6);
+    // La rangée repart de là où elle est, avec sa propre vitesse, sans à-coup.
+    const aim = d.rawP;
+    let to = Math.round(aim);
+    if (Math.abs(speed) > 1) to = speed > 0 ? Math.floor(aim) + 1 : Math.ceil(aim) - 1;
+    v = clamp(vel, -4, 4);
     go(to);
   }
   stage.addEventListener('pointerup', endDrag);
   stage.addEventListener('pointercancel', endDrag);
+
+  // ---------- Survol à la souris (ordinateur seulement) ----------
+  // Le cadre s'incline vers la souris, se soulève un peu, et un reflet de vitre suit le curseur.
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  let hovered = null;
+  function unhover() {
+    if (!hovered) return;
+    const st = hovered.tilt.style;
+    hovered.el.classList.remove('is-hover');
+    st.setProperty('--rx', '0deg');
+    st.setProperty('--ry', '0deg');
+    hovered = null;
+  }
+  stage.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || !finePointer.matches || reduceMotion.matches) return;
+    if (drag && drag.active) return;
+    const el = e.target.closest('.work');
+    const w = el ? works[+el.dataset.i] : null;
+    if (w !== hovered) {
+      unhover();
+      if (!w) return;
+      hovered = w;
+      w.el.classList.add('is-hover');
+    }
+    if (!w) return;
+    interact();
+    const r = w.el.getBoundingClientRect();
+    const u = clamp((e.clientX - r.left) / r.width, 0, 1);
+    const q = clamp((e.clientY - r.top) / r.height, 0, 1);
+    const st = w.tilt.style;
+    st.setProperty('--rx', ((0.5 - q) * 10).toFixed(2) + 'deg');
+    st.setProperty('--ry', ((u - 0.5) * 12).toFixed(2) + 'deg');
+    st.setProperty('--mx', (u * 100).toFixed(1) + '%');
+    st.setProperty('--my', (q * 100).toFixed(1) + '%');
+  });
+  stage.addEventListener('pointerleave', unhover);
 
   // ---------- Molette et pavé tactile ----------
   let wheelAcc = 0, wheelLock = 0, wheelMag = 0, wheelReset = 0;
