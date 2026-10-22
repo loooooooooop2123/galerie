@@ -1085,6 +1085,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       document.body.classList.add('is-ready');
       intro.classList.add('is-done');
       setTimeout(() => { intro.hidden = true; }, 900);
+      document.dispatchEvent(new Event('valois:ready'));
     });
 
   let resizeRaf = 0;
@@ -1100,7 +1101,9 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 // ---------- Musique ----------
 // Deux pièces de Bach jouées par Kimiko Ishizaka (enregistrements CC0, Wikimedia Commons) :
 // Prélude en ut majeur BWV 846, puis Aria des Variations Goldberg BWV 988, enchaînés en boucle.
-// Rien ne joue tant que le visiteur n'a pas cliqué ; la musique continue d'un tableau à l'autre.
+// Elle démarre à la fin de l'écran d'accueil. Les navigateurs refusent le son avant un premier geste
+// du visiteur : dans ce cas, elle part à son premier clic, toucher ou appui de touche. Elle continue
+// d'un tableau à l'autre, et un visiteur qui la coupe ne l'entend plus repartir seule.
 (() => {
   const TRACKS = ['musique/bach-prelude-ut-majeur.mp3', 'musique/bach-goldberg-aria.mp3'];
   const LEVEL = 0.32;   // volume d'écoute : environ −10 dB sous des fichiers déjà normalisés à −23 LUFS
@@ -1112,6 +1115,12 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   const AC = window.AudioContext || window.webkitAudioContext;
   const useWebAudio = location.protocol !== 'file:' && !!AC;
   let ctx = null, master = null, players = null, current = 0, on = false, pauseTimer = 0;
+  let wantAuto = false, armed = false;
+
+  // Le choix du visiteur (musique coupée ou non) est gardé d'une visite à l'autre.
+  const KEY = 'valois-musique';
+  const prefOff = () => { try { return localStorage.getItem(KEY) === 'off'; } catch { return false; } };
+  const savePref = v => { try { localStorage.setItem(KEY, v); } catch {} };
 
   // Un niveau de volume qu'on fait glisser dans le temps.
   function makeLevel(param, apply) {
@@ -1191,14 +1200,15 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     btn.title = label;
   }
 
-  function start() {
+  function start(fromAuto) {
     if (!players) setup();
+    disarm();
     on = true;
     clearTimeout(pauseTimer);
     if (ctx && ctx.state !== 'running') ctx.resume();
     const p = players[current];
     if (p.level.value < 1) p.level.to(1, 0.05);
-    p.audio.play().catch(() => { on = false; show(); });
+    p.audio.play().catch(() => { on = false; show(); if (fromAuto) arm(); });
     master.to(LEVEL, FADE_IN);
     show();
   }
@@ -1211,10 +1221,58 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     show();
   }
 
-  btn.addEventListener('click', () => (on ? stop() : start()));
+  btn.addEventListener('click', () => {
+    if (on) { stop(); wantAuto = false; savePref('off'); }
+    else { start(); savePref('on'); }
+  });
+
+  // ---------- Démarrage à la fin de l'écran d'accueil ----------
+  const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'];
+  function onGesture(e) {
+    if (e.target.closest && e.target.closest('#sound')) return;   // le bouton s'en charge lui-même
+    if (navigator.userActivation && !navigator.userActivation.isActive) return;
+    if (wantAuto && !on && !prefOff()) start();
+    else disarm();
+  }
+  function arm() {
+    if (armed) return;
+    armed = true;
+    GESTURES.forEach(t => addEventListener(t, onGesture, true));
+  }
+  function disarm() {
+    if (!armed) return;
+    armed = false;
+    GESTURES.forEach(t => removeEventListener(t, onGesture, true));
+  }
+  function autoStart() {
+    if (on || prefOff() || document.hidden) return;
+    if (!players) setup();
+    const activated = navigator.userActivation && navigator.userActivation.hasBeenActive;
+    if (activated || (ctx && ctx.state === 'running')) {
+      start(true);
+      // Certains navigateurs (Safari) exigent un geste au moment même : sinon on attend le prochain.
+      setTimeout(() => {
+        if (on && ctx && ctx.state !== 'running') {
+          players.forEach(p => p.audio.pause());
+          on = false;
+          show();
+          arm();
+        }
+      }, 600);
+      return;
+    }
+    if (!ctx) {
+      // Fichier ouvert depuis le disque : on essaie, le navigateur répond par oui ou non.
+      players[current].audio.play().then(() => { if (!on) start(); }, arm);
+      return;
+    }
+    arm();
+  }
+  document.addEventListener('valois:ready', () => { wantAuto = true; autoStart(); });
 
   // Onglet en arrière-plan : la musique s'efface et reprend au retour, si elle était active.
   document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && wantAuto && !on) { autoStart(); return; }
     if (!on || !players) return;
     if (document.hidden) {
       master.to(0, 0.8);
