@@ -21,6 +21,7 @@
   --wall: oklch(99.3% 0.002 90);
   --ink: oklch(21% 0.008 70);
   --ink-soft: oklch(41% 0.008 70);
+  --ink-faint: oklch(66% 0.006 70);
   --placeholder: oklch(88% 0.003 90);
   --shadow-near: oklch(20% 0.01 60 / 0.10);
   --shadow-far: oklch(20% 0.01 60 / 0.36);
@@ -272,6 +273,43 @@ body {
   text-wrap: pretty;
 }
 
+/* ---------- Musique : un seul bouton, discret ----------
+   Trois points quand la musique est coupée, trois barres quand elle joue. Aucune animation continue. */
+.sound {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 200ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.sound[aria-pressed="true"] { color: var(--ink-soft); }
+.sound:hover { color: var(--ink); }
+.sound:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sound svg { display: block; width: 18px; height: 18px; overflow: visible; }
+.sound line {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0.1);
+  transition: transform 300ms var(--ease-out);
+}
+.sound[aria-pressed="true"] line:nth-child(1) { transform: scaleY(0.55); }
+.sound[aria-pressed="true"] line:nth-child(2) { transform: scaleY(1); }
+.sound[aria-pressed="true"] line:nth-child(3) { transform: scaleY(0.72); }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -290,6 +328,7 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas img { transition-duration: 150ms; }
+  .sound line { transition: none; }
 }
 </style>
 </head>
@@ -302,6 +341,14 @@ body {
   <div class="captions" id="captions"></div>
   <p class="sr-only" id="status" aria-live="polite"></p>
 </main>
+
+<button class="sound" id="sound" type="button" aria-pressed="false" aria-label="Activer la musique" title="Activer la musique">
+  <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+    <line x1="4" y1="1" x2="4" y2="17"></line>
+    <line x1="9" y1="1" x2="9" y2="17"></line>
+    <line x1="14" y1="1" x2="14" y2="17"></line>
+  </svg>
+</button>
 
 <!-- Flou de mouvement horizontal, appliqué à la rangée seulement pendant qu'elle bouge -->
 <svg class="defs" aria-hidden="true" focusable="false">
@@ -521,13 +568,15 @@ body {
     const pad = clamp(vh * 0.045, 16, 44);
     const gapCap = clamp(vh * 0.032, 14, 24);
     const narrow = vw < 640;
+    // Sur écran étroit, le texte occupe toute la largeur : on garde la place du bouton de musique en bas.
+    const padB = pad + (vw < 700 ? 40 : 0);
 
     let H0 = geo ? geo.H0 : Math.min(vh * 0.43, 320);
     let capH = 0, sigRow = 0;
     for (let pass = 0; pass < 2; pass++) {
       sigRow = sizeSignatures(H0, vw);
       capH = captions.offsetHeight;
-      const avail = vh - 2 * pad - gapCap - capH;
+      const avail = vh - pad - padB - gapCap - capH;
       H0 = Math.max(72, Math.min(vh * 0.43, avail / 1.1, (narrow ? 0.64 : 0.5) * vw / 0.72));
     }
 
@@ -550,7 +599,7 @@ body {
       return { ow, oh, t, m };
     });
     const maxOH = Math.max(...sizes.map(s => s.oh));
-    const cy = Math.max(pad + maxOH / 2, Math.min(vh / 2, vh - pad - capH - gapCap - maxOH / 2));
+    const cy = Math.max(pad + maxOH / 2, Math.min(vh / 2, vh - padB - capH - gapCap - maxOH / 2));
     const G = 0.15 * H0;
 
     // Disposition « au repos » autour de chaque tableau central n (voisins -R…R, en boucle),
@@ -895,6 +944,140 @@ body {
     resizeRaf = requestAnimationFrame(() => { computeGeometry(); render(); });
   });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { computeGeometry(); render(); });
+})();
+</script>
+
+<script>
+// ---------- Musique ----------
+// Deux pièces de Bach jouées par Kimiko Ishizaka (enregistrements CC0, Wikimedia Commons) :
+// Prélude en ut majeur BWV 846, puis Aria des Variations Goldberg BWV 988, enchaînés en boucle.
+// Rien ne joue tant que le visiteur n'a pas cliqué ; la musique continue d'un tableau à l'autre.
+(() => {
+  const TRACKS = ['musique/bach-prelude-ut-majeur.mp3', 'musique/bach-goldberg-aria.mp3'];
+  const LEVEL = 0.32;   // volume d'écoute : environ −10 dB sous des fichiers déjà normalisés à −23 LUFS
+  const FADE_IN = 3, FADE_OUT = 1.5, XFADE = 4;
+
+  const btn = document.getElementById('sound');
+  // Web Audio quand la page est servie : fondus précis, y compris sur iPhone où le volume d'un
+  // élément audio ne se règle pas. Ouverte depuis le disque, la page règle le volume des éléments.
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const useWebAudio = location.protocol !== 'file:' && !!AC;
+  let ctx = null, master = null, players = null, current = 0, on = false, pauseTimer = 0;
+
+  // Un niveau de volume qu'on fait glisser dans le temps.
+  function makeLevel(param, apply) {
+    let value = 0, anim = 0;
+    return {
+      get value() { return value; },
+      to(v, seconds) {
+        if (param) {
+          const now = ctx.currentTime;
+          param.cancelScheduledValues(now);
+          param.setValueAtTime(param.value, now);
+          param.linearRampToValueAtTime(v, now + seconds);
+          value = v;
+          return;
+        }
+        clearInterval(anim);
+        const from = value, t0 = performance.now(), ms = Math.max(1, seconds * 1000);
+        anim = setInterval(() => {
+          const u = Math.min(1, (performance.now() - t0) / ms);
+          value = from + (v - from) * u;
+          apply();
+          if (u >= 1) clearInterval(anim);
+        }, 30);
+      }
+    };
+  }
+
+  function setup() {
+    if (useWebAudio) {
+      ctx = new AC();
+      const out = ctx.createGain();
+      out.gain.value = 0;
+      out.connect(ctx.destination);
+      master = makeLevel(out.gain);
+      players = TRACKS.map(src => {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        ctx.createMediaElementSource(audio).connect(g).connect(out);
+        return { audio, level: makeLevel(g.gain), leaving: false };
+      });
+    } else {
+      const apply = () => players.forEach(p => { p.audio.volume = Math.min(1, Math.max(0, master.value * p.level.value)); });
+      master = makeLevel(null, apply);
+      players = TRACKS.map(src => {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.volume = 0;
+        return { audio, level: makeLevel(null, apply), leaving: false };
+      });
+    }
+    players.forEach((p, i) => {
+      const near = () => on && i === current && !p.leaving && p.audio.duration - p.audio.currentTime <= XFADE;
+      p.audio.addEventListener('timeupdate', () => { if (near()) crossfade(); });
+      p.audio.addEventListener('ended', () => { if (on && i === current) crossfade(); });
+    });
+  }
+
+  // Fondu enchaîné vers la pièce suivante, sans silence entre les deux.
+  function crossfade() {
+    const a = players[current];
+    a.leaving = true;
+    a.level.to(0, XFADE);
+    setTimeout(() => { a.audio.pause(); a.leaving = false; }, XFADE * 1000 + 150);
+    current = (current + 1) % players.length;
+    const b = players[current];
+    b.audio.currentTime = 0;
+    b.level.to(1, XFADE);
+    b.audio.play().catch(() => {});
+  }
+
+  function show() {
+    const label = on ? 'Couper la musique' : 'Activer la musique';
+    btn.setAttribute('aria-pressed', String(on));
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+  }
+
+  function start() {
+    if (!players) setup();
+    on = true;
+    clearTimeout(pauseTimer);
+    if (ctx && ctx.state !== 'running') ctx.resume();
+    const p = players[current];
+    if (p.level.value < 1) p.level.to(1, 0.05);
+    p.audio.play().catch(() => { on = false; show(); });
+    master.to(LEVEL, FADE_IN);
+    show();
+  }
+
+  function stop() {
+    on = false;
+    master.to(0, FADE_OUT);
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => { if (!on) players.forEach(p => p.audio.pause()); }, FADE_OUT * 1000 + 150);
+    show();
+  }
+
+  btn.addEventListener('click', () => (on ? stop() : start()));
+
+  // Onglet en arrière-plan : la musique s'efface et reprend au retour, si elle était active.
+  document.addEventListener('visibilitychange', () => {
+    if (!on || !players) return;
+    if (document.hidden) {
+      master.to(0, 0.8);
+      clearTimeout(pauseTimer);
+      pauseTimer = setTimeout(() => { if (document.hidden) players.forEach(p => p.audio.pause()); }, 900);
+    } else {
+      clearTimeout(pauseTimer);
+      if (ctx && ctx.state !== 'running') ctx.resume();
+      players[current].audio.play().catch(() => {});
+      master.to(LEVEL, 2);
+    }
+  });
 })();
 </script>
 </body>
