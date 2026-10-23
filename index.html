@@ -281,11 +281,13 @@ body {
   inset: 0;
   z-index: 500;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-content: center;
   justify-items: center;
   gap: 40px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
+  container-type: inline-size;
   background: var(--wall);
   transition: opacity 800ms var(--ease-out), filter 800ms var(--ease-out), visibility 0s linear 800ms;
 }
@@ -315,19 +317,27 @@ body {
   text-transform: uppercase;
   color: var(--ink-soft);
 }
+/* Deux rangées de huit, côte à côte quand la place le permet. La taille suit la largeur disponible,
+   donc la rangée ne déborde jamais de l'écran. */
 .intro-works {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 12px 9px;
-  max-width: min(940px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
 }
-/* Une seule ligne quand la place le permet, sinon deux lignes égales de huit. */
-.intro-break { display: none; flex-basis: 100%; height: 0; }
-@media (max-width: 980px) { .intro-break { display: block; } }
+.intro-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 9px;
+}
+@container (min-width: 960px) {
+  .intro-works { flex-direction: row; align-items: flex-end; gap: 9px; }
+}
 .mini {
-  height: var(--mini-h, 38px);
+  height: 30px;
+  height: clamp(16px, calc((100cqi - 100px) / 10), 38px);
   aspect-ratio: var(--r);
   padding: 2px;
   background: var(--frame, var(--placeholder));
@@ -339,48 +349,13 @@ body {
 }
 .mini.is-in { opacity: 1; transform: none; filter: none; }
 .mini img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
-/* Le compteur et « Entrer » occupent la même place : l'un s'efface quand l'autre arrive. */
-.intro-foot { display: grid; place-items: center; min-height: 36px; }
-.intro-foot > * { grid-area: 1 / 1; }
 .intro-count {
   margin: 0;
   font-size: 11px;
   letter-spacing: 0.14em;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
-  transition: opacity 500ms var(--ease-out);
 }
-.intro.is-loaded { cursor: pointer; }
-.intro.is-loaded .intro-count { opacity: 0; }
-.intro-enter {
-  position: relative;
-  padding: 12px 8px 12px calc(8px + 0.36em);
-  border: 0;
-  background: none;
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0.36em;
-  text-transform: uppercase;
-  color: var(--ink);
-  cursor: pointer;
-  animation: arrive 900ms var(--ease-out) 200ms both;
-}
-.intro-enter::after {
-  content: "";
-  position: absolute;
-  left: calc(8px + 0.36em);
-  right: calc(8px + 0.36em);
-  bottom: 5px;
-  height: 1px;
-  background: currentColor;
-  transform: scaleX(0.3);
-  transition: transform 450ms var(--ease-out);
-}
-.intro-enter:hover::after,
-.intro-enter:focus-visible::after { transform: scaleX(1); }
-.intro-enter:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 @keyframes arrive {
   from { opacity: 0; transform: translateY(8px); filter: blur(6px); }
   to { opacity: 1; transform: none; filter: none; }
@@ -442,13 +417,13 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   .meta cite { font-size: 14px; }
   .cap { gap: 10px; }
   .intro { gap: 30px; }
-  .mini { --mini-h: 24px; }
-  .intro-works { gap: 10px 7px; }
+  .intro-works { gap: 10px; }
+  .intro-row { gap: 7px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .canvas img { transition-duration: 150ms; }
   .sound line { transition: none; }
-  .intro-brand, .intro-enter { animation-name: fade; }
+  .intro-brand { animation-name: fade; }
   .mini { transform: none; filter: none; }
   .intro.is-done { filter: none; }
 }
@@ -460,10 +435,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 <div class="intro" id="intro" role="status" aria-label="Chargement de la galerie">
   <p class="intro-brand"><span class="intro-name">Valois</span><span class="intro-sub">Art Advisory</span></p>
   <div class="intro-works" id="intro-works" aria-hidden="true"></div>
-  <div class="intro-foot">
-    <p class="intro-count" id="intro-count" aria-hidden="true"></p>
-    <button class="intro-enter" id="intro-enter" type="button" hidden>Entrer</button>
-  </div>
+  <p class="intro-count" id="intro-count" aria-hidden="true"></p>
 </div>
 
 <main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
@@ -1078,9 +1050,8 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   render();
 
   // ---------- Écran d'accueil ----------
-  // Il reste au moins le temps de lire le nom et de voir passer les œuvres. Dès que les miniatures et les
-  // tableaux visibles au centre sont chargés (au plus 9 s, même sur un réseau lent), « Entrer » apparaît :
-  // ce clic ouvre la galerie et, parce que c'est un geste du visiteur, autorise la musique à coup sûr.
+  // Il reste au moins le temps de lire le nom et de voir passer les œuvres, puis s'efface dès que
+  // les miniatures et les tableaux visibles au centre sont chargés (au plus 9 s, même sur un réseau lent).
   const intro = document.getElementById('intro');
   const introWorks = document.getElementById('intro-works');
   const introCount = document.getElementById('intro-count');
@@ -1089,6 +1060,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   const pad2 = n => String(n).padStart(2, '0');
   let shown = 0;
   introCount.textContent = `${pad2(0)} / ${pad2(N)}`;
+  const introRows = [0, 1].map(() => introWorks.appendChild(Object.assign(document.createElement('div'), { className: 'intro-row' })));
   const minis = WORKS.map((w, i) => {
     const m = document.createElement('span');
     m.className = 'mini';
@@ -1103,8 +1075,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     });
     im.src = miniOf(w);
     m.append(im);
-    introWorks.append(m);
-    if (i === N / 2 - 1) introWorks.append(Object.assign(document.createElement('span'), { className: 'intro-break' }));
+    introRows[i < N / 2 ? 0 : 1].append(m);
     // Chaque œuvre arrive à son tour, une fois chargée.
     done.then(() => {
       const wait = Math.max(0, introStart + 250 + i * 110 - performance.now());
@@ -1118,35 +1089,15 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   const centre = works.filter((_, i) => Math.abs(wrap(i - target)) <= 2).map(w => w.loaded);
   Promise.race([Promise.all([...minis, ...centre]), new Promise(r => setTimeout(r, MAX_INTRO))])
     .then(() => new Promise(r => setTimeout(r, Math.max(0, introStart + MIN_INTRO - performance.now()))))
-    .then(showEnter);
-
-  const enterBtn = document.getElementById('intro-enter');
-  function showEnter() {
-    intro.classList.add('is-loaded');
-    intro.setAttribute('aria-label', 'Galerie prête');
-    enterBtn.hidden = false;
-    enterBtn.focus({ preventScroll: true });
-    intro.addEventListener('click', enter);
-    addEventListener('keydown', onIntroKey);
-  }
-  function onIntroKey(e) {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    enter();
-  }
-  function enter() {
-    if (ready) return;
-    intro.removeEventListener('click', enter);
-    removeEventListener('keydown', onIntroKey);
-    ready = true;
-    lastInteract = lastArrive = performance.now();
-    document.body.classList.add('is-ready');
-    intro.classList.add('is-done');
-    stage.focus({ preventScroll: true });
-    setTimeout(() => { intro.hidden = true; }, 900);
-    // Envoyé pendant le geste du visiteur : le navigateur laisse la musique démarrer.
-    document.dispatchEvent(new Event('valois:ready'));
-  }
+    .then(() => {
+      ready = true;
+      lastInteract = lastArrive = performance.now();
+      document.body.classList.add('is-ready');
+      intro.classList.add('is-done');
+      stage.focus({ preventScroll: true });
+      setTimeout(() => { intro.hidden = true; }, 900);
+      document.dispatchEvent(new Event('valois:ready'));
+    });
 
   let resizeRaf = 0;
   addEventListener('resize', () => {
@@ -1161,9 +1112,9 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 // ---------- Musique ----------
 // Deux pièces de Bach jouées par Kimiko Ishizaka (enregistrements CC0, Wikimedia Commons) :
 // Prélude en ut majeur BWV 846, puis Aria des Variations Goldberg BWV 988, enchaînés en boucle.
-// Elle démarre quand le visiteur clique sur « Entrer » : ce geste autorise le son dans tous les navigateurs.
-// Par sécurité, si le son était tout de même refusé, elle part au geste suivant. Elle continue d'un tableau
-// à l'autre, et un visiteur qui la coupe ne l'entend plus repartir seule.
+// Elle démarre à la fin de l'écran d'accueil. Les navigateurs refusent le son avant un premier geste
+// du visiteur : dans ce cas, elle part à son premier clic, toucher ou appui de touche. Elle continue
+// d'un tableau à l'autre, et un visiteur qui la coupe ne l'entend plus repartir seule.
 (() => {
   const TRACKS = ['musique/bach-prelude-ut-majeur.mp3', 'musique/bach-goldberg-aria.mp3'];
   const LEVEL = 0.32;   // volume d'écoute : environ −10 dB sous des fichiers déjà normalisés à −23 LUFS
