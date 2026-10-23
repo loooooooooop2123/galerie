@@ -498,6 +498,11 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   color: var(--ink-faint);
 }
 .qsrc::before { content: "— "; }
+/* Sans description, les mots de l'artiste suffisent : ils prennent la place du texte. */
+.quote.seule {
+  font-size: 16px;
+  color: var(--ink);
+}
 
 .sr-only {
   position: absolute;
@@ -578,8 +583,8 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'joconde', artist: 'Léonard de Vinci', title: 'La Joconde', date: 'vers 1503–1519',
       img: 'oeuvres/joconde.jpg', w: 1074, h: 1600, frame: 'or',
       sig: 'signatures/vinci.svg', sr: 5.55,
-      text: "Lisa Gherardini, épouse d'un marchand florentin, nous regarde depuis cinq siècles. Les contours fondent dans le sfumato, le paysage s'évapore en bleus lointains, et le sourire hésite, suspendu entre deux pensées.",
-      quote: "« Le bon peintre doit peindre deux choses : l'homme et son esprit. »"
+      quote: "« Le bon peintre doit peindre deux choses : l'homme et son esprit. »",
+      src: "Léonard de Vinci, Traité de la peinture"
     },
     {
       id: 'ecole-d-athenes', artist: 'Raphaël', title: "L'École d'Athènes", date: '1509–1511',
@@ -621,7 +626,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'tres-de-mayo', artist: 'Francisco de Goya', title: 'Tres de mayo', date: '1814',
       img: 'oeuvres/goya.jpg', w: 1600, h: 1234, frame: 'or',
       sig: 'signatures/goya.svg', sr: 1.72,
-      text: "Dans la nuit du 2 au 3 mai 1808, les soldats de Napoléon fusillent des Madrilènes. Face à une rangée de fusils sans visages, un homme en chemise blanche ouvre les bras dans la lumière d'une lanterne.",
       quote: "« Perpétuer au moyen du pinceau les actions ou les scènes les plus notables et héroïques de notre glorieuse insurrection contre le tyran de l'Europe. »",
       src: "Francisco de Goya, lettre au Conseil de régence, 24 février 1814"
     },
@@ -629,7 +633,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'voyageur', artist: 'Caspar David Friedrich', title: 'Le Voyageur contemplant une mer de nuages', date: 'vers 1817',
       img: 'oeuvres/friedrich.jpg', w: 1256, h: 1600, frame: 'noyer',
       sig: 'signatures/friedrich.svg', sr: 3.69,
-      text: "Un homme de dos, debout sur un rocher, contemple une mer de brume d'où surgissent des crêtes. Nous ne voyons jamais son visage : nous regardons avec lui, entre vertige et recueillement.",
       quote: "« Le peintre ne doit pas seulement peindre ce qu'il voit devant lui, mais aussi ce qu'il voit en lui. »",
       src: "Caspar David Friedrich, notes, vers 1830"
     },
@@ -637,7 +640,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'grande-vague', artist: 'Katsushika Hokusai', title: 'La Grande Vague de Kanagawa', date: 'vers 1830–1832',
       img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia',
       sig: 'signatures/hokusai.png', sr: 0.37,
-      text: "Une vague se dresse comme une griffe d'écume au-dessus de trois barques ; dans son creux, le mont Fuji n'est plus qu'un petit cône de neige. Le bleu de Prusse, alors nouveau au Japon, donne à la mer sa profondeur.",
       quote: "« À cent dix ans, chaque point, chaque trait sera vivant. »",
       src: "Hokusai, postface des Cent vues du mont Fuji, 1834"
     },
@@ -673,7 +675,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'le-cri', artist: 'Edvard Munch', title: 'Le Cri', date: '1893',
       img: 'oeuvres/cri.jpg', w: 1280, h: 1589, frame: 'noyer',
       sig: 'signatures/munch.svg', sr: 3.03,
-      text: "Au coucher du soleil, sur une route qui domine le fjord d'Oslo, une figure se prend la tête entre les mains. Le ciel rougeoie, le paysage entier vibre avec elle ; deux promeneurs s'éloignent sans rien voir.",
       quote: "« J'ai senti un cri infini traverser la nature. »",
       src: "Edvard Munch, carnet, Nice, 22 janvier 1892"
     },
@@ -689,7 +690,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'le-baiser', artist: 'Gustav Klimt', title: 'Le Baiser', date: '1907–1908',
       img: 'oeuvres/baiser.jpg', w: 1280, h: 1284, frame: 'or',
       sig: 'signatures/klimt.png', sr: 2.70,
-      text: "Au bord d'un pré fleuri qui s'arrête au-dessus du vide, deux amants s'enlacent dans un même manteau d'or. Ses rectangles à lui, ses cercles et ses fleurs à elle se mêlent sans se confondre.",
       quote: "« Qui veut savoir quelque chose de moi […] doit regarder attentivement mes tableaux. »",
       src: "Gustav Klimt, texte manuscrit"
     }
@@ -795,9 +795,9 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     cap.className = 'cap';
     cap.innerHTML = `
       <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${de(w.artist)}" draggable="false"></div>
-      <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>
-      <p class="text">${fr(w.text)}</p>${w.quote ? `
-      <p class="quote">${fr(w.quote)}${w.src ? `<span class="qsrc">${fr(w.src)}</span>` : ''}</p>` : ''}`;
+      <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>${w.text ? `
+      <p class="text">${fr(w.text)}</p>` : ''}${w.quote ? `
+      <p class="quote${w.text ? '' : ' seule'}">${fr(w.quote)}${w.text && w.src ? `<span class="qsrc">${fr(w.src)}</span>` : ''}</p>` : ''}`;
     captions.append(cap);
     return { cap, sig: cap.querySelector('.sig'), ratio: w.sr };
   });
