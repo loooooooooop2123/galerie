@@ -49,7 +49,6 @@
   --wall-mid: oklch(96.6% 0.005 85);
   --wall-shade: oklch(92.6% 0.007 80);
   --spot: oklch(100% 0 0 / 0.85);
-  --cable: oklch(35% 0.01 70 / 0.26);
   --frame-light: oklch(100% 0 0 / 0.35);
   --frame-dark: oklch(0% 0 0 / 0.32);
   --rabbet: oklch(15% 0.01 60 / 0.35);
@@ -145,20 +144,6 @@ body {
   pointer-events: none;
   background: radial-gradient(50% 50% at 50% 40%, var(--spot) 0%, transparent 72%);
 }
-/* Accrochage de musée : deux fils par tableau, accrochés à un rail au-dessus de l'écran.
-   Dessinés à part (calque .cables) pour qu'ils puissent s'incliner, se courber et se balancer. */
-.cables {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-.cables path { fill: none; stroke: url(#cable-grad); stroke-linecap: round; }
-.cable-top { stop-color: var(--cable); stop-opacity: 0; }
-.cable-low { stop-color: var(--cable); stop-opacity: 1; }
 /* Le cadre lui-même : c'est lui qui s'incline sous la souris, la position reste sur .work */
 .tilt {
   position: absolute;
@@ -540,14 +525,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 <main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
   <h1 class="sr-only">Valois Art Advisory</h1>
   <div class="wall" aria-hidden="true"><div class="wall-grain"></div></div>
-  <svg class="cables" id="cables" aria-hidden="true">
-    <defs>
-      <linearGradient id="cable-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="60">
-        <stop offset="0" class="cable-top"></stop>
-        <stop offset="1" class="cable-low"></stop>
-      </linearGradient>
-    </defs>
-  </svg>
   <div id="track"></div>
   <div class="edge edge-left" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="edge edge-right" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -878,10 +855,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     // au-dessus d'eux, reste net.
     for (const e of edges) e.style.height = vh + 'px';
 
-    // Les fils s'estompent en montant vers le rail et sont pleins à l'attache du cadre.
-    cablesSvg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
-    cableGrad.setAttribute('y1', (-0.25 * vh).toFixed(1));
-    cableGrad.setAttribute('y2', Math.max(20, cy - maxOH / 2).toFixed(1));
 
     geo = { vw, vh, hBox, cy, G, sizes, layouts };
   }
@@ -911,10 +884,8 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       const inRange = Math.abs(k0) <= R && Math.abs(k1) <= R;
       const focused = zoom > 0 && i === current;
       const o = focused ? 1 : (inRange ? opacityAt(d) : 0) * rest;
-      const pair = cables[i];
       if (o <= 0.001) {
         if (st.visibility !== 'hidden') st.visibility = 'hidden';
-        pair[0].o = pair[1].o = 0;
       } else {
         const sz = sizes[i];
         let s = lerp(A.s[k0 + R], B.s[k1 + R], t);
@@ -930,13 +901,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
         st.opacity = o.toFixed(3);
         st.visibility = 'visible';
         st.zIndex = focused ? '300' : String(100 - Math.round(d * 10));
-        // Points d'attache des deux fils : sur le haut du cadre, à 18 % et 82 % de sa largeur.
-        const midX = tx + sz.ow / 2, top = ty + sz.oh / 2 * (1 - s), half = sz.ow * s * 0.32;
-        pair[0].tx = midX - half;
-        pair[1].tx = midX + half;
-        pair[0].ty = pair[1].ty = top;
-        pair[0].o = pair[1].o = o;
-        pair[0].w = pair[1].w = Math.max(0.6, s);
       }
       if (d < 5.5) ensureImage(i);
 
@@ -953,56 +917,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       e.style.width = band.toFixed(1) + 'px';
       e.style.opacity = rest.toFixed(3);
     }
-    // Hors de la boucle d'animation (chargement, redimensionnement), les fils se posent droit.
-    if (!inFrame) stepCables(0, true);
-  }
-
-  // ---------- Fils d'accrochage ----------
-  // Le haut de chaque fil glisse sur un rail au-dessus de l'écran et suit le cadre avec un peu de retard :
-  // quand le tableau bouge, le fil s'incline, se courbe légèrement, puis se balance avant de revenir
-  // à la verticale (ressort peu amorti, comme un pendule).
-  const SVGNS = 'http://www.w3.org/2000/svg';
-  const cablesSvg = document.getElementById('cables');
-  const cableGrad = document.getElementById('cable-grad');
-  const cables = WORKS.map(() => [0, 1].map(() => ({
-    el: cablesSvg.appendChild(document.createElementNS(SVGNS, 'path')),
-    ax: NaN, av: 0, tx: 0, ty: 0, o: 0, w: 1, shown: true
-  })));
-  const CK = 55, CC = 4.2;          // raideur et amortissement du balancement
-  let inFrame = false;
-
-  function stepCables(dt, snap) {
-    if (!geo) return false;
-    const ay = -0.25 * geo.vh;       // le rail, au-dessus de l'écran
-    let moving = false;
-    for (const pair of cables) for (const c of pair) {
-      if (c.o <= 0.001) {
-        if (c.shown) { c.el.setAttribute('visibility', 'hidden'); c.shown = false; }
-        c.ax = NaN;
-        continue;
-      }
-      if (snap || Number.isNaN(c.ax) || reduceMotion.matches) {
-        c.ax = c.tx; c.av = 0;
-      } else {
-        let left = dt;
-        while (left > 0) {
-          const h = Math.min(left, 1 / 240);
-          c.av += (CK * (c.tx - c.ax) - CC * c.av) * h;
-          c.ax += c.av * h;
-          left -= h;
-        }
-        // Un fil ne s'écarte pas indéfiniment : on borne son inclinaison.
-        c.ax = clamp(c.ax, c.tx - 90, c.tx + 90);
-        if (Math.abs(c.tx - c.ax) > 0.15 || Math.abs(c.av) > 0.6) moving = true;
-      }
-      const bend = clamp(-c.av * 0.035, -14, 14);
-      const mx = (c.ax + c.tx) / 2 + bend, my = (ay + c.ty) / 2;
-      c.el.setAttribute('d', `M${c.ax.toFixed(1)} ${ay.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${c.tx.toFixed(1)} ${c.ty.toFixed(1)}`);
-      c.el.setAttribute('stroke-width', c.w.toFixed(2));
-      c.el.setAttribute('opacity', c.o.toFixed(3));
-      if (!c.shown) { c.el.setAttribute('visibility', 'visible'); c.shown = true; }
-    }
-    return moving;
   }
 
   let current = -1;
@@ -1075,12 +989,9 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     vel += ((p - prev) / dt - vel) * (1 - Math.exp(-dt * 16));
     setMotionBlur(vel * spacingAt(Math.round(p)));
     if (drag && drag.active) setCurrent(mod(Math.round(p), N), false);
-    inFrame = true;
     render();
-    inFrame = false;
-    const swinging = stepCables(dt, false);
 
-    const busy = (drag && drag.active) || tween || springOn || zoomTween || swinging || Math.abs(vel) > 0.01;
+    const busy = (drag && drag.active) || tween || springOn || zoomTween || Math.abs(vel) > 0.01;
     if (busy) raf = requestAnimationFrame(frame);
     else { raf = 0; vel = 0; setMotionBlur(0); }
   }
