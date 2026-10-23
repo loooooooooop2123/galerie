@@ -477,6 +477,28 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   to { transform: scaleY(1); }
 }
 
+/* La parole de l'artiste, d'un critique ou d'un témoin, en retrait sous la description. */
+.quote {
+  margin: 0;
+  max-width: 30rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+.qsrc {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.qsrc::before { content: "— "; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -499,7 +521,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 /* Téléphone tenu à l'horizontale : trop peu de hauteur pour tout montrer. Le tableau passe en premier,
    avec sa signature et son titre ; la description revient dès qu'on redresse le téléphone. */
 @media (max-height: 500px) and (orientation: landscape) {
-  .cap .text { display: none; }
+  .cap .text, .cap .quote { display: none; }
   .cap { gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -556,97 +578,121 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       id: 'joconde', artist: 'Léonard de Vinci', title: 'La Joconde', date: 'vers 1503–1519',
       img: 'oeuvres/joconde.jpg', w: 1074, h: 1600, frame: 'or',
       sig: 'signatures/vinci.svg', sr: 5.55,
-      text: "Lisa Gherardini, épouse d'un marchand de soie florentin, pose devant un paysage imaginaire de rochers et de rivières. Léonard peint sans contours : le sfumato fond les ombres et laisse le sourire en suspens, impossible à fixer. Il y cherche la vie intérieure de son modèle, cet instant fugace entre deux expressions."
+      text: "Vers 1503, Léonard commence le portrait de Lisa Gherardini, épouse d'un marchand de soie florentin, et ne s'en séparera plus : il l'emporte jusqu'en France. Les contours se dissolvent dans le sfumato, le paysage se perd en vapeurs bleutées, et le sourire, à peine posé, semble toujours sur le point de naître ou de s'effacer.",
+      quote: "« Un sourire si plaisant qu'il était chose plus divine qu'humaine à regarder. »",
+      src: "Giorgio Vasari, Les Vies, 1568"
     },
     {
       id: 'ecole-d-athenes', artist: 'Raphaël', title: "L'École d'Athènes", date: '1509–1511',
       img: 'oeuvres/raphael.jpg', w: 1600, h: 998, frame: 'or',
       sig: 'signatures/raphael.svg', sr: 2.30,
-      text: "Sous de grandes voûtes inspirées de l'Antiquité, Raphaël réunit les philosophes grecs en une seule assemblée. Au centre, Platon montre le ciel et Aristote désigne la terre : le monde des idées face à celui de l'expérience. Autour d'eux, on débat, on écrit, on mesure. La fresque célèbre le savoir comme une conversation qui traverse les siècles."
+      text: "Pour les appartements du pape Jules II, Raphaël peint à fresque un portique immense où se rassemblent les penseurs de l'Antiquité. Au centre, Platon lève le doigt vers le ciel, Aristote étend la main vers la terre : deux chemins vers la vérité, sous la même voûte. Autour d'eux, on débat, on écrit, on mesure ; la pensée devient architecture."
     },
     {
       id: 'chasseurs-dans-la-neige', artist: 'Pieter Bruegel l’Ancien', title: 'Les Chasseurs dans la neige', date: '1565',
       img: 'oeuvres/bruegel.jpg', w: 1600, h: 1138, frame: 'chene',
       sig: 'signatures/bruegel.svg', sr: 5.83,
-      text: "Trois chasseurs rentrent au village avec leurs chiens, presque bredouilles, un seul renard sur le dos. En contrebas, la vallée gelée s'anime : on patine, on joue, on travaille. Bruegel peint le cycle des saisons et la vie ordinaire des paysans, petite et tenace face à un hiver immense, sous un ciel vert et froid."
+      text: "Trois chasseurs las redescendent vers le village, leurs chiens sur les talons, un seul renard pour butin. En contrebas, la vallée gelée s'anime de patineurs minuscules ; au loin se dressent des cimes que la Flandre ne connaît pas. Peint en 1565 pour la demeure d'un marchand d'Anvers, dans une suite consacrée aux saisons, le tableau tient tout l'hiver dans un souffle.",
+      quote: "« On dit que, dans les Alpes, il avala toutes ces montagnes et ces rochers pour les recracher, de retour chez lui, sur ses toiles et ses panneaux. »",
+      src: "Karel van Mander, Le Livre des peintres, 1604"
     },
     {
       id: 'vocation-de-saint-matthieu', artist: 'Le Caravage', title: 'La Vocation de saint Matthieu', date: '1599–1600',
       img: 'oeuvres/caravage.jpg', w: 1600, h: 1510, frame: 'noyer',
       sig: 'signatures/caravage.svg', sr: 4.75,
-      text: "Dans une salle sombre, des collecteurs d'impôts comptent leur argent. Le Christ entre à droite et désigne Matthieu, qui va tout quitter pour le suivre. Un rayon de lumière traverse la pièce en suivant son geste. Le Caravage transpose une scène sacrée dans la Rome de son temps et fait de la lumière le signe de l'appel divin."
+      text: "Dans une salle close de la Rome de 1600, des hommes comptent de l'argent autour d'une table. Le Christ entre à peine, presque effacé dans l'ombre ; seuls son geste et un rayon oblique traversent la pièce jusqu'à Matthieu. Pour sa première grande commande publique, à Saint-Louis-des-Français, le Caravage fait surgir le sacré au milieu du quotidien, par la seule lumière.",
+      quote: "« … dans l'air sombre d'une chambre close, sous une lumière haute qui tombait d'aplomb. »",
+      src: "Giovanni Pietro Bellori, Vies des peintres modernes, 1672"
     },
     {
       id: 'ronde-de-nuit', artist: 'Rembrandt', title: 'La Ronde de nuit', date: '1642',
       img: 'oeuvres/ronde.jpg', w: 1600, h: 1302, frame: 'ebene',
       sig: 'signatures/rembrandt.svg', sr: 3.68,
-      text: "Une compagnie de la milice d'Amsterdam commande un portrait de groupe. Rembrandt en fait une scène d'action : le capitaine donne l'ordre de marche, les hommes s'animent, une fillette baignée de lumière traverse la foule. Le titre vient du vernis, noirci avec le temps. La scène se passe en plein jour."
+      text: "La compagnie du capitaine Frans Banninck Cocq attendait un portrait de groupe, aligné et solennel. Rembrandt lui donne un départ : les ordres fusent, le tambour roule, les piques se croisent, et une fillette baignée d'or traverse la troupe comme une apparition. Son ancien élève Samuel van Hoogstraten écrira qu'à côté d'elle, les autres portraits de milice ressemblaient à des cartes à jouer."
     },
     {
       id: 'jeune-fille-a-la-perle', artist: 'Johannes Vermeer', title: 'La Jeune Fille à la perle', date: 'vers 1665',
       img: 'oeuvres/perle.jpg', w: 1280, h: 1516, frame: 'ebene',
       sig: 'signatures/vermeer.svg', sr: 2.31,
-      text: "Une jeune fille inconnue se retourne vers nous, les lèvres entrouvertes, comme surprise par notre présence. Vermeer peint une « tronie », une étude de visage coiffée d'un turban exotique, sans modèle identifié. Sur le fond sombre, il peint surtout la lumière : le reflet de la perle, l'éclat humide de l'œil, le bleu outremer du turban."
+      text: "Elle n'est le portrait de personne : c'est une « tronie », l'étude d'un visage et d'un turban venu d'ailleurs. Elle se retourne, les lèvres entrouvertes, comme si nous venions d'entrer. Derrière elle, Vermeer avait peint un rideau vert que les siècles ont plongé dans le noir ; il ne reste qu'elle, la lumière sur sa joue et l'éclat suspendu d'une perle."
     },
     {
       id: 'tres-de-mayo', artist: 'Francisco de Goya', title: 'Tres de mayo', date: '1814',
       img: 'oeuvres/goya.jpg', w: 1600, h: 1234, frame: 'or',
       sig: 'signatures/goya.svg', sr: 1.72,
-      text: "Le 3 mai 1808, au lendemain d'un soulèvement à Madrid, les soldats de Napoléon fusillent des civils. Goya oppose une rangée de soldats sans visage à un homme en chemise blanche qui lève les bras, éclairé par une lanterne, comme un martyr. Il ne peint aucun héros glorieux, seulement la violence de la guerre et ses victimes."
+      text: "Dans la nuit du 2 au 3 mai 1808, après le soulèvement de Madrid, les soldats de Napoléon fusillent des civils. Goya ne donne pas de visage aux bourreaux, seulement une rangée de fusils ; face à eux, un homme en chemise blanche ouvre les bras dans la lumière d'une lanterne. L'image ne montre ni gloire ni bataille, seulement des hommes face aux fusils.",
+      quote: "« Perpétuer au moyen du pinceau les actions ou les scènes les plus notables et héroïques de notre glorieuse insurrection contre le tyran de l'Europe. »",
+      src: "Francisco de Goya, lettre au Conseil de régence, 24 février 1814"
     },
     {
       id: 'voyageur', artist: 'Caspar David Friedrich', title: 'Le Voyageur contemplant une mer de nuages', date: 'vers 1817',
       img: 'oeuvres/friedrich.jpg', w: 1256, h: 1600, frame: 'noyer',
       sig: 'signatures/friedrich.svg', sr: 3.69,
-      text: "Un homme vu de dos se tient sur un rocher, face à une mer de brouillard d'où émergent des sommets. Nous ne voyons pas son visage : nous regardons le paysage avec lui. Friedrich, figure du romantisme allemand, peint la solitude devant l'immensité de la nature, entre vertige, contemplation et sentiment du sublime."
+      text: "Un homme vu de dos, debout sur un rocher, domine une mer de brume d'où émergent des crêtes. Nous ne voyons jamais son visage : nous regardons avec lui, presque à sa place. Friedrich compose ce paysage à partir de croquis pris dans les montagnes de l'Elbe, mais c'est un état intérieur qu'il donne à voir, entre vertige et recueillement.",
+      quote: "« Le peintre ne doit pas seulement peindre ce qu'il voit devant lui, mais aussi ce qu'il voit en lui. »",
+      src: "Caspar David Friedrich, notes, vers 1830"
     },
     {
       id: 'grande-vague', artist: 'Katsushika Hokusai', title: 'La Grande Vague de Kanagawa', date: 'vers 1830–1832',
       img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia',
       sig: 'signatures/hokusai.png', sr: 0.37,
-      text: "Une vague immense se dresse au-dessus de trois barques de pêcheurs, prête à s'abattre. Au loin, le mont Fuji paraît minuscule, presque une vague de plus. Hokusai oppose la force de la nature à la fragilité des hommes, et l'instant à la permanence de la montagne sacrée. Le bleu de Prusse, venu d'Europe, était alors une nouveauté au Japon."
+      text: "Une vague se dresse comme une griffe d'écume au-dessus de trois barques ; dans son creux, le mont Fuji n'est plus qu'un petit cône de neige. Hokusai a environ soixante-dix ans quand il compose cette estampe, la plus célèbre des Trente-six vues du mont Fuji. Le bleu de Prusse, encore nouveau au Japon, donne à la mer sa profondeur froide.",
+      quote: "« À cent dix ans, chaque point, chaque trait sera vivant. »",
+      src: "Hokusai, postface des Cent vues du mont Fuji, 1834"
     },
     {
       id: 'pluie-vapeur-vitesse', artist: 'William Turner', title: 'Pluie, vapeur et vitesse', date: '1844',
       img: 'oeuvres/turner.jpg', w: 1600, h: 1200, frame: 'or',
       sig: 'signatures/turner.svg', sr: 1.04,
-      text: "Une locomotive du Great Western Railway fonce vers nous sur un pont au-dessus de la Tamise, à travers la pluie. Les contours se dissolvent dans la lumière et la vapeur. Un lièvre court devant le train, minuscule. Turner peint la vitesse de l'ère industrielle et réduit le paysage à une sensation de mouvement."
+      text: "Sur le pont de Maidenhead, une locomotive du Great Western Railway surgit de l'averse et fonce vers nous. Tout se défait en pluie, en vapeur, en lumière ; seule la cheminée noire tient encore. Devant le train, à peine visible, un lièvre court sur la voie. Turner, presque septuagénaire, peint la vitesse moderne comme une tempête.",
+      quote: "« Le monde n'a jamais rien vu de semblable à ce tableau. »",
+      src: "William Makepeace Thackeray, Fraser's Magazine, 1844"
     },
     {
       id: 'impression-soleil-levant', artist: 'Claude Monet', title: 'Impression, soleil levant', date: '1872',
       img: 'oeuvres/impression.jpg', w: 1600, h: 1240, frame: 'or',
       sig: 'signatures/monet.svg', sr: 6.97,
-      text: "Le port du Havre au petit matin, vu depuis la fenêtre d'un hôtel. Quelques touches rapides suffisent : des grues et des cheminées dans la brume, deux barques sombres, un soleil orange qui se reflète dans l'eau. Monet saisit une sensation de lumière plus qu'un lieu. Moqué par un critique en 1874, le titre a donné son nom à l'impressionnisme."
+      text: "Le port du Havre au petit matin, vu depuis une fenêtre. Quelques touches suffisent : des grues et des mâts dissous dans la brume, deux barques sombres, et ce disque orange dont le reflet tremble sur l'eau. Exposé en 1874 dans l'ancien atelier du photographe Nadar, le tableau inspire à un critique moqueur le nom de tout un mouvement : l'impressionnisme.",
+      quote: "« Mettez Impression. »",
+      src: "Claude Monet, à qui l'on demandait un titre pour le catalogue (rapporté par Maurice Guillemot, 1898)"
     },
     {
       id: 'bar-aux-folies-bergere', artist: 'Édouard Manet', title: 'Un bar aux Folies Bergère', date: '1882',
       img: 'oeuvres/manet.jpg', w: 1600, h: 1196, frame: 'or',
       sig: 'signatures/manet.svg', sr: 1.65,
-      text: "Une serveuse, Suzon, se tient derrière le comptoir d'un célèbre café-concert parisien. Le miroir derrière elle reflète la salle, les lumières et un client, mais le reflet ne correspond pas tout à fait à la scène. Dans ce dernier grand tableau, Manet montre la solitude d'une femme au milieu de la foule et de la vie moderne."
+      text: "Derrière le comptoir d'un café-concert parisien, une serveuse nous fait face, lointaine au milieu de la fête. Le miroir dans son dos renvoie les lustres, la foule et un client en chapeau, mais ce reflet ne s'accorde pas tout à fait avec elle. Dans son dernier grand tableau, exposé au Salon de 1882, Manet laisse la solitude affleurer au cœur même du plaisir."
     },
     {
       id: 'nuit-etoilee', artist: 'Vincent van Gogh', title: 'La Nuit étoilée', date: '1889',
       img: 'oeuvres/nuit.jpg', w: 1600, h: 1266, frame: 'chene',
       sig: 'signatures/vangogh.svg', sr: 2.47,
-      text: "Depuis l'asile de Saint-Rémy-de-Provence, où il s'est fait admettre, Van Gogh peint la vue de sa fenêtre avant l'aube. Le village, lui, est inventé. Le ciel tourbillonne, les étoiles brûlent, un cyprès monte comme une flamme noire. Il peint la nuit telle qu'il la ressent : une nature vivante, en mouvement, où l'émotion compte plus que l'exactitude."
+      text: "De sa chambre à l'asile de Saint-Rémy-de-Provence, où il s'est fait admettre, Van Gogh regarde les collines et le ciel avant l'aube. Sur la toile, le ciel roule en spirales, les étoiles brûlent, un cyprès s'élance comme une flamme sombre entre la terre et les astres. Le village paisible, lui, vient de son imagination.",
+      quote: "Il écrit avoir vu la campagne de sa fenêtre longtemps avant le lever du soleil, avec seulement l'étoile du matin, qui paraissait très grande.",
+      src: "Vincent van Gogh, lettre à son frère Théo, juin 1889"
     },
     {
       id: 'le-cri', artist: 'Edvard Munch', title: 'Le Cri', date: '1893',
       img: 'oeuvres/cri.jpg', w: 1280, h: 1589, frame: 'noyer',
       sig: 'signatures/munch.svg', sr: 3.03,
-      text: "Munch se souvient d'une promenade au coucher du soleil au-dessus du fjord d'Oslo. Le ciel vire au rouge sang et il dit avoir senti un cri infini traverser la nature. La figure, les mains contre le visage, ondule avec le paysage, tandis que deux passants s'éloignent sans rien voir. Munch donne une forme visible à l'angoisse."
+      text: "Sur une route qui domine le fjord d'Oslo, au coucher du soleil, une figure se prend la tête entre les mains. Le ciel ondule en rouges et en orangés, le paysage entier semble vibrer avec elle, tandis que deux promeneurs s'éloignent. Au crayon, dans un coin du ciel, Munch lui-même a écrit : « Ne peut avoir été peint que par un fou ! »",
+      quote: "« J'ai senti un cri infini traverser la nature. »",
+      src: "Edvard Munch, carnet, Nice, 22 janvier 1892"
     },
     {
       id: 'joueurs-de-cartes', artist: 'Paul Cézanne', title: 'Les Joueurs de cartes', date: 'vers 1890–1895',
       img: 'oeuvres/cezanne.jpg', w: 1600, h: 1312, frame: 'chene',
       sig: 'signatures/cezanne.svg', sr: 2.50,
-      text: "Deux paysans d'Aix-en-Provence jouent aux cartes, face à face, absorbés et silencieux. Cézanne construit la scène comme une architecture : la bouteille au centre partage la toile, les corps forment des volumes solides. Il cherche à rendre la permanence et la gravité des choses simples, au-delà de l'instant."
+      text: "Deux paysans des environs d'Aix, face à face, penchés sur leurs cartes. Rien ne bouge : ni les mains, ni les regards, ni la bouteille qui partage la table en deux. Cézanne bâtit la scène par masses et par plans, comme une architecture, et donne à ce moment ordinaire une gravité tranquille, presque monumentale.",
+      quote: "« Traitez la nature par le cylindre, la sphère, le cône, le tout mis en perspective. »",
+      src: "Paul Cézanne, lettre à Émile Bernard, 15 avril 1904"
     },
     {
       id: 'le-baiser', artist: 'Gustav Klimt', title: 'Le Baiser', date: '1907–1908',
       img: 'oeuvres/baiser.jpg', w: 1280, h: 1284, frame: 'or',
       sig: 'signatures/klimt.png', sr: 2.70,
-      text: "Un couple enlacé au bord d'un pré fleuri, enveloppé dans un même manteau d'or. Le vêtement de l'homme se couvre de rectangles noirs et blancs, celui de la femme de cercles colorés et de fleurs, deux motifs qui se fondent en une seule forme. Au sommet de sa période dorée, Klimt fait de l'amour une icône, entre extase et vertige."
+      text: "Au bord d'un pré fleuri qui s'arrête net au-dessus du vide, deux amants s'enlacent dans un même manteau d'or. Lui est fait de rectangles noirs et blancs, elle de cercles et de fleurs ; leurs motifs se mêlent sans se confondre. L'État autrichien acquiert la toile dès son exposition, en 1908 : l'amour y devient icône, entre extase et vertige.",
+      quote: "« Qui veut savoir quelque chose de moi […] doit regarder attentivement mes tableaux. »",
+      src: "Gustav Klimt, texte manuscrit"
     }
   ];
 
@@ -751,7 +797,8 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     cap.innerHTML = `
       <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${de(w.artist)}" draggable="false"></div>
       <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>
-      <p class="text">${fr(w.text)}</p>`;
+      <p class="text">${fr(w.text)}</p>${w.quote ? `
+      <p class="quote">${fr(w.quote)}<span class="qsrc">${fr(w.src)}</span></p>` : ''}`;
     captions.append(cap);
     return { cap, sig: cap.querySelector('.sig'), ratio: w.sr };
   });
