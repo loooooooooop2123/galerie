@@ -43,6 +43,15 @@
   --shadow-mid: oklch(20% 0.01 60 / 0.28);
   --shadow-far: oklch(20% 0.01 60 / 0.42);
   --bevel: oklch(99% 0.004 85);
+
+  /* Mur de la galerie : plus clair au centre, un peu plus sombre vers les bords */
+  --wall-lit: oklch(99.4% 0.003 85);
+  --wall-mid: oklch(96.6% 0.005 85);
+  --wall-shade: oklch(92.6% 0.007 80);
+  --spot: oklch(100% 0 0 / 0.85);
+  --cable: oklch(35% 0.01 70 / 0.26);
+  --frame-light: oklch(100% 0 0 / 0.35);
+  --frame-dark: oklch(0% 0 0 / 0.32);
   --rabbet: oklch(15% 0.01 60 / 0.35);
 
   /* Cadres : un matériau par œuvre */
@@ -93,6 +102,24 @@ body {
 
 #track { position: absolute; inset: 0; }
 
+/* ---------- Le mur ----------
+   Un blanc de galerie légèrement vivant : lumière plus franche au centre, pénombre douce vers les bords,
+   et un grain de plâtre très fin pour qu'il ne fasse pas « aplat numérique ». */
+.wall {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 92% at 50% 36%, var(--wall-lit) 0%, var(--wall-mid) 52%, var(--wall-shade) 100%);
+}
+.wall-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  mix-blend-mode: soft-light;
+  background-size: 200px 200px;
+}
+
 /* ---------- Tableaux ---------- */
 .work {
   position: absolute;
@@ -106,25 +133,58 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* Projecteur de galerie : une lueur sur le mur, centrée un peu au-dessus du tableau, qui le suit. */
+.work::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -40%;
+  right: -40%;
+  top: -60%;
+  bottom: -32%;
+  pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 40%, var(--spot) 0%, transparent 72%);
+}
+/* Accrochage de musée : deux câbles très fins qui descendent du haut jusqu'au cadre. */
+.work::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 100%;
+  height: 160vh;
+  pointer-events: none;
+  border-left: 1px solid var(--cable);
+  border-right: 1px solid var(--cable);
+  -webkit-mask-image: linear-gradient(to top, #000 55%, transparent);
+  mask-image: linear-gradient(to top, #000 55%, transparent);
+}
 /* Le cadre lui-même : c'est lui qui s'incline sous la souris, la position reste sur .work */
 .tilt {
   position: absolute;
   inset: 0;
   background: var(--frame);
-  /* Ombre portée sur le mur, en trois couches : contact net, ombre moyenne, halo large et doux. */
+  /* Relief de la baguette (arête éclairée en haut, plus sombre en bas), puis ombre portée sur le mur :
+     contact net au pied du cadre, ombre moyenne, et grand halo doux tiré vers le bas par la lumière d'en haut. */
   box-shadow:
+    inset 0 1px 0 var(--frame-light),
+    inset 0 -2px 3px var(--frame-dark),
     0 2px 3px var(--shadow-near),
-    0 16px 30px -10px var(--shadow-mid),
-    0 48px 84px -30px var(--shadow-far);
+    0 6px 8px -4px var(--shadow-mid),
+    0 20px 34px -12px var(--shadow-mid),
+    0 56px 90px -34px var(--shadow-far);
   transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--lift, 1));
   transition: transform 700ms var(--ease-out), box-shadow 700ms var(--ease-out);
 }
 .work.is-hover .tilt {
   --lift: 1.02;
   box-shadow:
+    inset 0 1px 0 var(--frame-light),
+    inset 0 -2px 3px var(--frame-dark),
     0 3px 5px var(--shadow-near),
-    0 22px 40px -12px var(--shadow-mid),
-    0 64px 100px -34px var(--shadow-far);
+    0 8px 12px -4px var(--shadow-mid),
+    0 26px 44px -12px var(--shadow-mid),
+    0 72px 110px -34px var(--shadow-far);
   transition-duration: 160ms, 400ms;
 }
 /* Reflet de vitre qui suit la souris */
@@ -226,7 +286,7 @@ body {
   mask-image: linear-gradient(to left, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-left > i:nth-child(4) {
-  background: linear-gradient(to left, transparent 35%, color-mix(in oklab, var(--wall) 75%, transparent) 70%, var(--wall) 92%);
+  background: linear-gradient(to left, transparent 35%, color-mix(in oklab, var(--wall-shade) 75%, transparent) 70%, var(--wall-shade) 92%);
 }
 .edge-right > i:nth-child(1) {
   -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%), linear-gradient(to top, transparent 0, #000 20px);
@@ -241,7 +301,7 @@ body {
   mask-image: linear-gradient(to right, transparent 55%, #000 90%), linear-gradient(to top, transparent 0, #000 20px);
 }
 .edge-right > i:nth-child(4) {
-  background: linear-gradient(to right, transparent 35%, color-mix(in oklab, var(--wall) 75%, transparent) 70%, var(--wall) 92%);
+  background: linear-gradient(to right, transparent 35%, color-mix(in oklab, var(--wall-shade) 75%, transparent) 70%, var(--wall-shade) 92%);
 }
 
 /* ---------- Signature et description : fixes, seule l'opacité change ---------- */
@@ -486,6 +546,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 
 <main class="gallery" id="gallery" tabindex="-1" aria-roledescription="carrousel" aria-label="Galerie de tableaux">
   <h1 class="sr-only">Valois Art Advisory</h1>
+  <div class="wall" aria-hidden="true"><div class="wall-grain"></div></div>
   <div id="track"></div>
   <div class="edge edge-left" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="edge edge-right" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
@@ -643,6 +704,21 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     .replace(/vers (\d)/g, 'vers $1');
   const de = name => /^[aeiouyéèh]/i.test(name) ? "d'" + name : 'de ' + name;
 
+  // Grain de plâtre du mur, tiré une fois au chargement.
+  (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 200;
+    const x = c.getContext('2d');
+    const d = x.createImageData(200, 200);
+    for (let k = 0; k < d.data.length; k += 4) {
+      const v = 128 + (Math.random() - 0.5) * 64;
+      d.data[k] = d.data[k + 1] = d.data[k + 2] = v;
+      d.data[k + 3] = 255;
+    }
+    x.putImageData(d, 0, 0);
+    document.querySelector('.wall-grain').style.backgroundImage = `url(${c.toDataURL()})`;
+  })();
+
   // ---------- DOM ----------
   let suppressClick = false, pointerActive = false;
   const miniOf = w => w.img.replace('oeuvres/', 'oeuvres/mini/');
@@ -791,8 +867,9 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     // Le texte ne suit pas les tableaux : il reste à la même place, quel que soit le format affiché.
     const capTop = cy + maxOH / 2 + gapCap;
     captions.style.transform = `translate3d(0, ${capTop.toFixed(1)}px, 0)`;
-    // Les bandeaux descendent sous les tableaux et leurs ombres, sans toucher au texte (la signature est au centre).
-    for (const e of edges) e.style.height = (capTop + sigRow).toFixed(1) + 'px';
+    // Les bandeaux couvrent toute la hauteur (pas de marche de lumière sur le mur) ; le texte, dessiné
+    // au-dessus d'eux, reste net.
+    for (const e of edges) e.style.height = vh + 'px';
 
     geo = { vw, vh, hBox, cy, G, sizes, layouts };
   }
