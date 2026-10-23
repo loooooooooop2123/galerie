@@ -187,19 +187,12 @@ body {
     0 72px 110px -34px var(--shadow-far);
   transition-duration: 160ms, 400ms;
 }
-/* Reflet de vitre qui suit la souris */
-.sheen {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), oklch(100% 0 0 / 0.55), transparent 55%);
-  mix-blend-mode: soft-light;
-  transition: opacity 500ms var(--ease-out);
-}
-.work.is-hover .sheen { opacity: 1; }
 .gallery.is-dragging .work { cursor: grabbing; }
-.work[aria-current="true"] { cursor: inherit; }
+/* Le tableau du centre s'agrandit au clic ; en vue agrandie, un clic n'importe où le remet en place. */
+.work[aria-current="true"] { cursor: zoom-in; }
+body.is-focus .gallery,
+body.is-focus .work { cursor: zoom-out; }
+body.is-focus .sound { opacity: 0; pointer-events: none; transition-delay: 0ms; transition-duration: 400ms; }
 .work:focus-visible { outline: 2px solid var(--ink); outline-offset: 8px; }
 
 [data-frame="or"] {
@@ -733,7 +726,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     const tilt = Object.assign(document.createElement('span'), { className: 'tilt' });
     const mat = Object.assign(document.createElement('span'), { className: 'mat' });
     const canvas = Object.assign(document.createElement('span'), { className: 'canvas' });
-    const sheen = Object.assign(document.createElement('span'), { className: 'sheen' });
     const img = new Image();
     img.alt = '';
     img.draggable = false;
@@ -746,9 +738,16 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     canvas.style.backgroundImage = `url("${miniOf(w)}")`;
     canvas.append(img);
     tilt.append(mat);
-    tilt.append(canvas, sheen);
+    tilt.append(canvas);
     el.append(tilt);
-    el.addEventListener('click', () => { if (!suppressClick) { interact(); goNearest(i); } });
+    el.addEventListener('click', e => {
+      if (suppressClick) return;
+      interact();
+      // Tableau du centre : on l'agrandit (ou on le referme). Tableau voisin : on l'amène au centre.
+      if (focusOn) { e.stopPropagation(); setFocus(false); }
+      else if (i === current) { e.stopPropagation(); setFocus(true); }
+      else goNearest(i);
+    });
     el.addEventListener('focus', () => { if (!pointerActive) { interact(); goNearest(i); } });
     track.append(el);
     return { el, tilt, mat, canvas, img, loaded, requested: false };
@@ -884,10 +883,12 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   let p = 0;
 
   function render() {
-    const { vw, cy, G, sizes, layouts } = geo;
+    const { vw, vh, cy, G, sizes, layouts } = geo;
     const n = Math.floor(p);
     const t = p - n;
     const A = layouts[mod(n, N)], B = layouts[mod(n + 1, N)];
+    // Vue agrandie (zoom de 0 à 1) : le tableau actif grandit au centre de l'écran, tout le reste s'efface.
+    const rest = 1 - zoom;
 
     for (let i = 0; i < N; i++) {
       const k0 = Math.round(wrap(i - n));
@@ -895,22 +896,30 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       const d = Math.abs(k0 - t);
       const st = works[i].el.style;
       const inRange = Math.abs(k0) <= R && Math.abs(k1) <= R;
-      const o = inRange ? opacityAt(d) : 0;
+      const focused = zoom > 0 && i === current;
+      const o = focused ? 1 : (inRange ? opacityAt(d) : 0) * rest;
       if (o <= 0.001) {
         if (st.visibility !== 'hidden') st.visibility = 'hidden';
       } else {
         const sz = sizes[i];
-        const s = lerp(A.s[k0 + R], B.s[k1 + R], t);
-        const x = lerp(A.x[k0 + R], B.x[k1 + R], t);
-        st.transform = `translate3d(${(vw / 2 + x - sz.ow / 2).toFixed(2)}px, ${(cy - sz.oh / 2).toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
+        let s = lerp(A.s[k0 + R], B.s[k1 + R], t);
+        let tx = vw / 2 + lerp(A.x[k0 + R], B.x[k1 + R], t) - sz.ow / 2;
+        let ty = cy - sz.oh / 2;
+        if (focused) {
+          const big = Math.min(vw * 0.92 / sz.ow, vh * 0.9 / sz.oh);
+          tx = lerp(tx, (vw - sz.ow) / 2, zoom);
+          ty = lerp(ty, (vh - sz.oh) / 2, zoom);
+          s = lerp(s, big, zoom);
+        }
+        st.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
         st.opacity = o.toFixed(3);
         st.visibility = 'visible';
-        st.zIndex = String(100 - Math.round(d * 10));
+        st.zIndex = focused ? '300' : String(100 - Math.round(d * 10));
       }
       if (d < 5.5) ensureImage(i);
 
       const c = caps[i].cap.style;
-      const co = clamp(1 - d * 1.8, 0, 1);
+      const co = clamp(1 - d * 1.8, 0, 1) * rest;
       c.opacity = co.toFixed(3);
       c.visibility = co > 0.01 ? 'visible' : 'hidden';
     }
@@ -918,7 +927,10 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     // Les bandeaux de flou s'arrêtent juste avant le tableau actif, qui reste net.
     const ow = lerp(sizes[mod(n, N)].ow, sizes[mod(n + 1, N)].ow, t);
     const band = Math.max(0, vw / 2 - ow / 2 - G * 0.5);
-    for (const e of edges) e.style.width = band.toFixed(1) + 'px';
+    for (const e of edges) {
+      e.style.width = band.toFixed(1) + 'px';
+      e.style.opacity = rest.toFixed(3);
+    }
   }
 
   let current = -1;
@@ -982,12 +994,18 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       if (Math.abs(p - target) < 0.0004 && Math.abs(v) < 0.002) { p = target; v = 0; springOn = false; arrived(); }
     }
 
+    if (zoomTween) {
+      const u = clamp((now - zoomTween.t0) / zoomTween.dur, 0, 1);
+      zoom = zoomTween.from + (zoomTween.to - zoomTween.from) * (1 - Math.pow(1 - u, 3));
+      if (u >= 1) zoomTween = null;
+    }
+
     vel += ((p - prev) / dt - vel) * (1 - Math.exp(-dt * 16));
     setMotionBlur(vel * spacingAt(Math.round(p)));
     if (drag && drag.active) setCurrent(mod(Math.round(p), N), false);
     render();
 
-    const busy = (drag && drag.active) || tween || springOn || Math.abs(vel) > 0.01;
+    const busy = (drag && drag.active) || tween || springOn || zoomTween || Math.abs(vel) > 0.01;
     if (busy) raf = requestAnimationFrame(frame);
     else { raf = 0; vel = 0; setMotionBlur(0); }
   }
@@ -1010,6 +1028,20 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   }
   function interact() { lastInteract = performance.now(); }
 
+  // ---------- Vue agrandie ----------
+  // Un clic sur le tableau du centre l'agrandit ; un clic n'importe où, un toucher ou Échap le remet en place.
+  let zoom = 0, zoomTween = null, focusOn = false;
+  function setFocus(on) {
+    if (on === focusOn) return;
+    focusOn = on;
+    document.body.classList.toggle('is-focus', on);
+    unhover();
+    interact();
+    if (reduceMotion.matches) { zoom = on ? 1 : 0; zoomTween = null; render(); }
+    else { zoomTween = { from: zoom, to: on ? 1 : 0, t0: performance.now(), dur: on ? 750 : 550 }; kick(); }
+    status.textContent = on ? `${WORKS[current].title}, vue agrandie. Échap pour revenir.` : '';
+  }
+
   function autoAdvance() {
     const to = Math.round(p) + 1;
     target = to;
@@ -1026,15 +1058,17 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   captions.addEventListener('pointerover', () => { readingCaption = true; });
   captions.addEventListener('pointerout', e => { if (!captions.contains(e.relatedTarget)) readingCaption = false; });
   setInterval(() => {
-    if (!ready || document.hidden || drag || tween || springOn || readingCaption) return;
+    if (!ready || focusOn || document.hidden || drag || tween || springOn || readingCaption) return;
     const now = performance.now();
     if (now - lastInteract < IDLE || now - lastArrive < DWELL) return;
     autoAdvance();
   }, 200);
 
   // ---------- Glisser (souris, doigt, stylet) ----------
+  // En vue agrandie, un clic ou un toucher n'importe où referme ; on ne fait pas glisser la rangée.
+  stage.addEventListener('click', () => { if (focusOn) setFocus(false); });
   stage.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || e.target.closest('.cap.is-active')) return;
+    if (focusOn || e.button !== 0 || e.target.closest('.cap.is-active')) return;
     interact();
     pointerActive = true;
     drag = { id: e.pointerId, x0: e.clientX, p0: p, rawP: p, spacing: spacingAt(Math.round(p)), active: false, samples: [] };
@@ -1088,7 +1122,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   stage.addEventListener('pointercancel', endDrag);
 
   // ---------- Survol à la souris (ordinateur seulement) ----------
-  // Le cadre s'incline vers la souris, se soulève un peu, et un reflet de vitre suit le curseur.
+  // Le cadre s'incline vers la souris et se soulève un peu.
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   let hovered = null;
   function unhover() {
@@ -1101,7 +1135,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   }
   stage.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse' || !finePointer.matches || reduceMotion.matches) return;
-    if (drag && drag.active) return;
+    if ((drag && drag.active) || focusOn) return;
     const el = e.target.closest('.work');
     const w = el ? works[+el.dataset.i] : null;
     if (w !== hovered) {
@@ -1118,8 +1152,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     const st = w.tilt.style;
     st.setProperty('--rx', ((0.5 - q) * 10).toFixed(2) + 'deg');
     st.setProperty('--ry', ((u - 0.5) * 12).toFixed(2) + 'deg');
-    st.setProperty('--mx', (u * 100).toFixed(1) + '%');
-    st.setProperty('--my', (q * 100).toFixed(1) + '%');
   });
   stage.addEventListener('pointerleave', unhover);
 
@@ -1128,6 +1160,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   stage.addEventListener('wheel', e => {
     e.preventDefault();
     interact();
+    if (focusOn) { setFocus(false); wheelLock = performance.now() + 500; return; }
     const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     const px = e.deltaMode === 1 ? raw * 16 : raw;
     const mag = Math.abs(px);
@@ -1154,6 +1187,11 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   addEventListener('keydown', e => {
     if (!ready || e.altKey || e.ctrlKey || e.metaKey) return;
     const k = e.key;
+    if (focusOn) {
+      // Échap referme ; une flèche referme puis passe au tableau suivant.
+      if (k === 'Escape') { e.preventDefault(); setFocus(false); return; }
+      if (['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', 'Home', 'End'].includes(k)) setFocus(false);
+    }
     if (k === 'ArrowRight' || k === 'PageDown') go(target + 1);
     else if (k === 'ArrowLeft' || k === 'PageUp') go(target - 1);
     else if (k === 'Home') goNearest(0);
