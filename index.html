@@ -47,6 +47,12 @@
 }
 
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+/* Sur téléphone, la galerie reste hors de l'encoche, de la barre d'état et de la barre d'accueil. */
+html {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 body {
   margin: 0;
   background: var(--wall);
@@ -364,12 +370,13 @@ body {
 .gallery, .sound { transition: opacity 1000ms var(--ease-out) 150ms; }
 body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 
-/* ---------- Musique : un seul bouton, discret ----------
-   Trois points quand la musique est coupée, trois barres quand elle joue. Aucune animation continue. */
+/* ---------- Musique : un seul bouton, dans le coin haut droit ----------
+   Un petit égaliseur : ses barres dansent doucement quand la musique joue, et restent immobiles et pâles
+   quand elle est coupée. On comprend d'un coup d'œil à quoi il sert. */
 .sound {
   position: fixed;
-  right: max(12px, env(safe-area-inset-right, 0px));
-  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  right: max(10px, env(safe-area-inset-right, 0px));
   z-index: 200;
   width: 40px;
   height: 40px;
@@ -390,16 +397,24 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
 .sound svg { display: block; width: 18px; height: 18px; overflow: visible; }
 .sound line {
   stroke: currentColor;
-  stroke-width: 1.6;
+  stroke-width: 1.8;
   stroke-linecap: round;
   transform-box: fill-box;
   transform-origin: center;
-  transform: scaleY(0.1);
+  transform: scaleY(var(--h));
   transition: transform 300ms var(--ease-out);
 }
-.sound[aria-pressed="true"] line:nth-child(1) { transform: scaleY(0.55); }
-.sound[aria-pressed="true"] line:nth-child(2) { transform: scaleY(1); }
-.sound[aria-pressed="true"] line:nth-child(3) { transform: scaleY(0.72); }
+.sound line:nth-child(1) { --h: 0.4; }
+.sound line:nth-child(2) { --h: 0.75; }
+.sound line:nth-child(3) { --h: 0.55; }
+.sound[aria-pressed="true"] line { animation: eq 1s ease-in-out infinite alternate; }
+.sound[aria-pressed="true"] line:nth-child(1) { animation-duration: 0.82s; animation-delay: -0.3s; }
+.sound[aria-pressed="true"] line:nth-child(2) { animation-duration: 1.1s; animation-delay: -0.6s; }
+.sound[aria-pressed="true"] line:nth-child(3) { animation-duration: 0.94s; animation-delay: -0.1s; }
+@keyframes eq {
+  from { transform: scaleY(0.22); }
+  to { transform: scaleY(1); }
+}
 
 .sr-only {
   position: absolute;
@@ -420,9 +435,17 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   .intro-works { gap: 10px; }
   .intro-row { gap: 7px; }
 }
+/* Téléphone tenu à l'horizontale : trop peu de hauteur pour tout montrer. Le tableau passe en premier,
+   avec sa signature et son titre ; la description revient dès qu'on redresse le téléphone. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cap .text { display: none; }
+  .cap { gap: 8px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .canvas img { transition-duration: 150ms; }
   .sound line { transition: none; }
+  .sound[aria-pressed="true"] line { animation: none; --h: 1; }
+  .sound[aria-pressed="true"] line:nth-child(1) { --h: 0.6; }
   .intro-brand { animation-name: fade; }
   .mini { transform: none; filter: none; }
   .intro.is-done { filter: none; }
@@ -657,8 +680,8 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
   // ---------- Géométrie ----------
   let geo = null;
 
-  function sizeSignatures(H0, vw) {
-    const k = clamp(H0 / 320, 0.78, 1.12);
+  function sizeSignatures(hBox, vw) {
+    const k = clamp(Math.min(hBox / 380, vw / 430), 0.7, 1.1);
     const row = Math.round(66 * k);
     const area = 5400 * k * k;
     const maxW = Math.min(230 * k, vw - 40);
@@ -673,45 +696,47 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     return row;
   }
 
+  // Le tableau actif reçoit toute la place laissée par le texte : une « boîte » qui va presque d'un bord
+  // à l'autre sur téléphone et occupe le cœur de l'écran sur ordinateur. Chaque œuvre y tient en gardant
+  // ses proportions, avec une surface voisine d'une œuvre à l'autre (un paysage n'écrase pas un portrait).
   function computeGeometry() {
     const vw = stage.clientWidth;
     const vh = stage.clientHeight;
-    const pad = clamp(vh * 0.045, 16, 44);
-    const gapCap = clamp(vh * 0.032, 14, 24);
     const narrow = vw < 640;
-    // Sur écran étroit, le texte occupe toute la largeur : on garde la place du bouton de musique en bas.
-    const padB = pad + (vw < 700 ? 40 : 0);
+    const pad = clamp(vh * 0.04, 12, 40);
+    const padTop = narrow ? Math.max(pad, 56) : pad;   // le bouton de musique occupe le coin haut droit
+    const gapCap = clamp(vh * 0.028, 12, 26);
+    // Écran tenu en hauteur (téléphone, tablette verticale) : le tableau prend presque toute la largeur.
+    const tall = vh > vw * 1.1;
+    const wBox = narrow ? vw * 0.86 : Math.min(vw * (tall ? 0.76 : 0.48), 1000);
+    const G = narrow ? 12 : clamp(vw * 0.03, 24, 56);
 
-    let H0 = geo ? geo.H0 : Math.min(vh * 0.43, 320);
+    let hBox = geo ? geo.hBox : vh * 0.5;
     let capH = 0, sigRow = 0;
     for (let pass = 0; pass < 2; pass++) {
-      sigRow = sizeSignatures(H0, vw);
+      sigRow = sizeSignatures(hBox, vw);
       capH = captions.offsetHeight;
-      const avail = vh - pad - padB - gapCap - capH;
-      H0 = Math.max(72, Math.min(vh * 0.43, avail / 1.1, (narrow ? 0.64 : 0.5) * vw / 0.72));
+      const avail = vh - padTop - pad - gapCap - capH;
+      hBox = Math.max(90, Math.min(avail, vh * (narrow ? 0.64 : 0.66)));
     }
 
-    const area = 0.7 * H0 * H0;
-    const unit = Math.sqrt(area);
-    const maxW = narrow ? vw * 0.76 : Math.min(vw * 0.46, H0 * 1.75);
+    const unit = 0.92 * hBox;
     const sizes = WORKS.map(w => {
       const r = w.w / w.h;
       const f = FRAMES[w.frame];
-      let ph = Math.sqrt(area / r);
+      const t = Math.max(3, f.t * unit);
+      const m = f.m ? f.m * unit : 0;
+      const inner = 2 * (t + m);
+      const bw = wBox - inner, bh = hBox - inner;
+      let ph = Math.min(bh, Math.sqrt(0.85 * bh * bh / r));
       let pw = ph * r;
-      let t = Math.max(3, f.t * unit);
-      let m = f.m ? f.m * unit : 0;
-      let ow = pw + 2 * (t + m);
-      let oh = ph + 2 * (t + m);
-      if (ow > maxW) {
-        const k = maxW / ow;
-        t *= k; m *= k; ow *= k; oh *= k;
-      }
-      return { ow, oh, t, m };
+      if (pw > bw) { pw = bw; ph = pw / r; }
+      return { ow: pw + inner, oh: ph + inner, t, m };
     });
     const maxOH = Math.max(...sizes.map(s => s.oh));
-    const cy = Math.max(pad + maxOH / 2, Math.min(vh / 2, vh - padB - capH - gapCap - maxOH / 2));
-    const G = 0.15 * H0;
+    // Le bloc tableau + texte est centré dans la hauteur, un peu au-dessus du milieu.
+    const free = Math.max(0, vh - padTop - pad - (maxOH + gapCap + capH));
+    const cy = padTop + free * 0.42 + maxOH / 2;
 
     // Disposition « au repos » autour de chaque tableau central n (voisins -R…R, en boucle),
     // puis interpolation entre deux repos pendant le mouvement.
@@ -745,7 +770,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     // Les bandeaux descendent sous les tableaux et leurs ombres, sans toucher au texte (la signature est au centre).
     for (const e of edges) e.style.height = (capTop + sigRow).toFixed(1) + 'px';
 
-    geo = { vw, vh, H0, cy, G, sizes, layouts };
+    geo = { vw, vh, hBox, cy, G, sizes, layouts };
   }
 
   // Distance moyenne (px) entre le tableau n et ses voisins : convertit un glissement en tableaux.
