@@ -4,6 +4,9 @@ Galerie d'art minimaliste : un écran d'accueil au nom de Valois Art Advisory, p
 Le tableau actif est net au centre, ses voisins plus petits sous un flou progressif de bord. Sous chaque œuvre,
 la vraie signature de l'artiste et une description.
 
+Quand on partage le lien, l'aperçu affiche « Valois Art Advisory — L’art, dans toute sa singularité. »
+avec l'image `partage.jpg` (1200 × 630).
+
 Aucune dépendance : ouvrir `index.html`, ou servir le dossier tel quel.
 
 ## Sources
