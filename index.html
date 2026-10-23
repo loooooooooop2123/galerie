@@ -579,8 +579,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       img: 'oeuvres/joconde.jpg', w: 1074, h: 1600, frame: 'or',
       sig: 'signatures/vinci.svg', sr: 5.55,
       text: "Lisa Gherardini, épouse d'un marchand florentin, nous regarde depuis cinq siècles. Les contours fondent dans le sfumato, le paysage s'évapore en bleus lointains, et le sourire hésite, suspendu entre deux pensées.",
-      quote: "« Le bon peintre doit peindre deux choses : l'homme et son esprit. »",
-      src: "Léonard de Vinci, Traité de la peinture"
+      quote: "« Le bon peintre doit peindre deux choses : l'homme et son esprit. »"
     },
     {
       id: 'ecole-d-athenes', artist: 'Raphaël', title: "L'École d'Athènes", date: '1509–1511',
@@ -798,7 +797,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       <div class="sig-row"><img class="sig" src="${w.sig}" alt="Signature ${de(w.artist)}" draggable="false"></div>
       <p class="meta">${w.artist} — <cite>${w.title}</cite><span class="date">, ${fr(w.date)}</span></p>
       <p class="text">${fr(w.text)}</p>${w.quote ? `
-      <p class="quote">${fr(w.quote)}<span class="qsrc">${fr(w.src)}</span></p>` : ''}`;
+      <p class="quote">${fr(w.quote)}${w.src ? `<span class="qsrc">${fr(w.src)}</span>` : ''}</p>` : ''}`;
     captions.append(cap);
     return { cap, sig: cap.querySelector('.sig'), ratio: w.sr };
   });
