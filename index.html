@@ -39,8 +39,10 @@
   --ink-soft: oklch(41% 0.008 70);
   --ink-faint: oklch(66% 0.006 70);
   --placeholder: oklch(88% 0.003 90);
-  --shadow-near: oklch(20% 0.01 60 / 0.10);
-  --shadow-far: oklch(20% 0.01 60 / 0.36);
+  --shadow-near: oklch(20% 0.01 60 / 0.14);
+  --shadow-mid: oklch(20% 0.01 60 / 0.28);
+  --shadow-far: oklch(20% 0.01 60 / 0.42);
+  --bevel: oklch(99% 0.004 85);
   --rabbet: oklch(15% 0.01 60 / 0.35);
 
   /* Cadres : un matériau par œuvre */
@@ -109,17 +111,20 @@ body {
   position: absolute;
   inset: 0;
   background: var(--frame);
+  /* Ombre portée sur le mur, en trois couches : contact net, ombre moyenne, halo large et doux. */
   box-shadow:
-    0 1px 2px var(--shadow-near),
-    0 26px 44px -26px var(--shadow-far);
+    0 2px 3px var(--shadow-near),
+    0 16px 30px -10px var(--shadow-mid),
+    0 48px 84px -30px var(--shadow-far);
   transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--lift, 1));
   transition: transform 700ms var(--ease-out), box-shadow 700ms var(--ease-out);
 }
 .work.is-hover .tilt {
   --lift: 1.02;
   box-shadow:
-    0 2px 4px var(--shadow-near),
-    0 36px 56px -30px var(--shadow-far);
+    0 3px 5px var(--shadow-near),
+    0 22px 40px -12px var(--shadow-mid),
+    0 64px 100px -34px var(--shadow-far);
   transition-duration: 160ms, 400ms;
 }
 /* Reflet de vitre qui suit la souris */
@@ -153,16 +158,18 @@ body {
   --frame: linear-gradient(135deg, var(--paulownia-reflet), var(--paulownia));
 }
 
+/* Passe-partout : le cadre y projette une légère ombre, et la fenêtre a un biseau blanc autour de l'œuvre. */
 .mat {
   position: absolute;
   background: var(--passe-partout);
-  box-shadow: inset 0 0 0 1px var(--shadow-near);
+  box-shadow: inset 0 0 0 1px var(--shadow-near), inset 0 3px 8px var(--shadow-near);
 }
 /* La miniature sert d'aperçu flou le temps que l'image pleine taille arrive. */
 .canvas {
   position: absolute;
   overflow: hidden;
   background: var(--placeholder) center / cover no-repeat;
+  box-shadow: 0 0 0 2px var(--bevel), 0 0 0 3px var(--shadow-near);
 }
 .canvas::after {
   content: "";
@@ -556,7 +563,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     },
     {
       id: 'grande-vague', artist: 'Katsushika Hokusai', title: 'La Grande Vague de Kanagawa', date: 'vers 1830–1832',
-      img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia', mat: true,
+      img: 'oeuvres/vague.jpg', w: 1600, h: 1076, frame: 'paulownia',
       sig: 'signatures/hokusai.png', sr: 0.37,
       text: "Une vague immense se dresse au-dessus de trois barques de pêcheurs, prête à s'abattre. Au loin, le mont Fuji paraît minuscule, presque une vague de plus. Hokusai oppose la force de la nature à la fragilité des hommes, et l'instant à la permanence de la montagne sacrée. Le bleu de Prusse, venu d'Europe, était alors une nouveauté au Japon."
     },
@@ -604,10 +611,6 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     }
   ];
 
-  // Épaisseur du cadre et du passe-partout, en fraction de la racine de la surface peinte.
-  const FRAMES = {
-    or: { t: 0.032 }, ebene: { t: 0.026 }, noyer: { t: 0.024 }, chene: { t: 0.022 }, paulownia: { t: 0.016, m: 0.075 }
-  };
 
   const N = WORKS.length;
   const R = 4;              // nombre de voisins disposés de chaque côté
@@ -652,7 +655,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     el.dataset.i = i;
     el.setAttribute('aria-label', `${w.title}, ${w.artist}`);
     const tilt = Object.assign(document.createElement('span'), { className: 'tilt' });
-    const mat = w.mat ? Object.assign(document.createElement('span'), { className: 'mat' }) : null;
+    const mat = Object.assign(document.createElement('span'), { className: 'mat' });
     const canvas = Object.assign(document.createElement('span'), { className: 'canvas' });
     const sheen = Object.assign(document.createElement('span'), { className: 'sheen' });
     const img = new Image();
@@ -666,7 +669,7 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
     });
     canvas.style.backgroundImage = `url("${miniOf(w)}")`;
     canvas.append(img);
-    if (mat) tilt.append(mat);
+    tilt.append(mat);
     tilt.append(canvas, sheen);
     el.append(tilt);
     el.addEventListener('click', () => { if (!suppressClick) { interact(); goNearest(i); } });
@@ -736,18 +739,18 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       hBox = Math.max(90, Math.min(avail, vh * (narrow ? 0.64 : 0.66)));
     }
 
-    const unit = 0.92 * hBox;
+    // Tous les cadres ont exactement la même taille. Chaque œuvre garde ses proportions et se centre
+    // dans un passe-partout, comme dans une exposition aux encadrements identiques.
+    const FR = 1.15;                               // format commun des cadres (largeur / hauteur)
+    const fh = Math.min(hBox, wBox / FR), fw = fh * FR;
+    const t = clamp(fh * 0.03, 5, 18);             // épaisseur de la baguette
+    const iw = fw - 2 * t, ih = fh - 2 * t;        // ouverture du cadre, remplie par le passe-partout
+    const mm = Math.min(iw, ih) * 0.08;            // marge minimale du passe-partout autour de l'œuvre
     const sizes = WORKS.map(w => {
       const r = w.w / w.h;
-      const f = FRAMES[w.frame];
-      const t = Math.max(3, f.t * unit);
-      const m = f.m ? f.m * unit : 0;
-      const inner = 2 * (t + m);
-      const bw = wBox - inner, bh = hBox - inner;
-      let ph = Math.min(bh, Math.sqrt(0.85 * bh * bh / r));
-      let pw = ph * r;
-      if (pw > bw) { pw = bw; ph = pw / r; }
-      return { ow: pw + inner, oh: ph + inner, t, m };
+      let pw = iw - 2 * mm, ph = pw / r;
+      if (ph > ih - 2 * mm) { ph = ih - 2 * mm; pw = ph * r; }
+      return { ow: fw, oh: fh, t, pw, ph };
     });
     const maxOH = Math.max(...sizes.map(s => s.oh));
     // Le bloc tableau + texte est centré dans la hauteur, un peu au-dessus du milieu.
@@ -776,8 +779,13 @@ body:not(.is-ready) .gallery, body:not(.is-ready) .sound { opacity: 0; }
       const { el, mat, canvas } = works[i];
       el.style.width = sz.ow + 'px';
       el.style.height = sz.oh + 'px';
-      if (mat) mat.style.inset = sz.t + 'px';
-      canvas.style.inset = (sz.t + sz.m) + 'px';
+      mat.style.inset = sz.t + 'px';
+      Object.assign(canvas.style, {
+        left: ((sz.ow - sz.pw) / 2).toFixed(1) + 'px',
+        top: ((sz.oh - sz.ph) / 2).toFixed(1) + 'px',
+        width: sz.pw.toFixed(1) + 'px',
+        height: sz.ph.toFixed(1) + 'px'
+      });
     });
 
     // Le texte ne suit pas les tableaux : il reste à la même place, quel que soit le format affiché.
